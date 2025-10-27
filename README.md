@@ -5,5 +5,5 @@
 ### build
 
 ```bash
-gcc ./src/c/main.c -o ./build/scientia
+gcc ./src/c/main.c -o ./bin/scientia
 ```
