@@ -3,11 +3,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#ifdef _WIN32
-    #include <direct.h>
-    #define mkdir(path, mode) _mkdir(path)
-#endif
-
 // Supported languages for note creation
 static char *LANGUAGES[] = {"en", "pl"};
 
@@ -15,14 +10,6 @@ int nn(char *path) {
     // Extract title (last component of path)
     char *title = path;
     char *last_slash = strrchr(path, '/');
-
-    #ifdef _WIN32
-        char *last_backslash = strrchr(path, '\\');
-        // Use whichever separator is last
-        if (last_backslash && (!last_slash || last_backslash > last_slash)) {
-            last_slash = last_backslash;
-        }
-    #endif
 
     if (last_slash != NULL) {
         title = last_slash + 1;  // Skip the separator
