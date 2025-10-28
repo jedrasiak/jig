@@ -1,5 +1,5 @@
-#ifndef NV_H
-#define NV_H
+#ifndef VERTEX_H
+#define VERTEX_H
 
 /**
  * Creates a new vertex directory with markdown files for each language.
@@ -9,4 +9,4 @@
  */
 int nv(char *path);
 
-#endif // NV_H
+#endif // VERTEX_H

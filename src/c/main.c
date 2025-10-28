@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "nv.h"
+#include "vertex.h"
 
 char *VERSION = "0.1.0";
 
