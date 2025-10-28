@@ -1,12 +1,12 @@
-#include "nn.h"
+#include "nv.h"
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 
-// Supported languages for note creation
+// Supported languages for vertex creation
 static char *LANGUAGES[] = {"en", "pl"};
 
-int nn(char *path) {
+int nv(char *path) {
     // Extract title (last component of path)
     char *title = path;
     char *last_slash = strrchr(path, '/');
@@ -37,7 +37,7 @@ int nn(char *path) {
             printf("File created successfully: %s\n", filepath);
         }
 
-        printf("Note created successfully: %s\n", path);
+        printf("Vertex created successfully: %s\n", path);
         return 0;
     } else {
         perror("Error creating directory");

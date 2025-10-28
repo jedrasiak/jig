@@ -31,10 +31,10 @@ make info
 ```
 scientia/
 ├── include/          # Header files (.h)
-│   └── nn.h
+│   └── nv.h
 ├── src/c/            # Source files (.c)
 │   ├── main.c
-│   └── nn.c
+│   └── nv.c
 ├── build/            # Object files (.o) - generated
 ├── bin/              # Compiled executable - generated
 │   └── scientia
@@ -45,5 +45,5 @@ scientia/
 
 If you prefer to compile manually:
 ```bash
-gcc -Wall -Wextra -I./include src/c/main.c src/c/nn.c -o bin/scientia
+gcc -Wall -Wextra -I./include src/c/main.c src/c/nv.c -o bin/scientia
 ```

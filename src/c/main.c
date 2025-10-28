@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "nn.h"
+#include "nv.h"
 
 char *VERSION = "0.1.0";
 
@@ -24,8 +24,8 @@ int main(int argc, char *argv[]) {
     }
 
     if (argc == 3) {
-        if (strcmp(argv[1], "nn") == 0) {
-            nn(argv[2]);
+        if (strcmp(argv[1], "nv") == 0) {
+            nv(argv[2]);
         } else {
             help();
         }
@@ -39,7 +39,7 @@ int help() {
     printf("  scientia <command> [options]\n");
     printf("\n");
     printf("Commands:\n");
-    printf("  nn     Create a new note\n");
+    printf("  nv     Create a new vertex\n");
     printf("  ne     Create a new edge\n");
     printf("\n");
     printf("Options:\n");
