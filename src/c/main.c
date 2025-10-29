@@ -39,8 +39,8 @@ int help() {
     printf("  scientia <command> [options]\n");
     printf("\n");
     printf("Commands:\n");
-    printf("  nv     Create a new vertex\n");
-    printf("  ne     Create a new edge\n");
+    printf("  nv <path>     Create a new vertex at the specified path\n");
+    printf("  ne            Create a new edge\n");
     printf("\n");
     printf("Options:\n");
     printf("  -h, --help       Show this help message and exit\n");
