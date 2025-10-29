@@ -18,6 +18,8 @@ int main(int argc, char *argv[]) {
     if (argc == 2) {
         if ((strcmp(argv[1], "--version") == 0) || (strcmp(argv[1], "-v") == 0)) {
             version();
+        } else if (strcmp(argv[1], "nv") == 0) {
+            nv(NULL);  // Create vertex in current directory
         } else {
             help();
         }
@@ -39,7 +41,7 @@ int help() {
     printf("  scientia <command> [options]\n");
     printf("\n");
     printf("Commands:\n");
-    printf("  nv <path>     Create a new vertex at the specified path\n");
+    printf("  nv [path]     Create a new vertex (optional: at specified path, default: current dir)\n");
     printf("  ne            Create a new edge\n");
     printf("\n");
     printf("Options:\n");
