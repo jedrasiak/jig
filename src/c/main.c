@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "vertex.h"
+#include "search.h"
 
 char *VERSION = "0.1.0";
 
@@ -28,6 +29,8 @@ int main(int argc, char *argv[]) {
     if (argc == 3) {
         if (strcmp(argv[1], "nv") == 0) {
             nv(argv[2]);
+        } else if (strcmp(argv[1], "search") == 0) {
+            search(argv[2]);
         } else {
             help();
         }
