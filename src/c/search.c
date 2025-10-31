@@ -8,6 +8,7 @@ int search(const char *phrase) {
     DIR *dir;
     struct dirent *entry;
     struct stat statbuf;
+    char fullpath[1024];
     
     // Open the current directory
     dir = opendir(".");
@@ -18,8 +19,8 @@ int search(const char *phrase) {
     }
     
     printf("Searching for: %s\n", phrase);
-    printf("%-20s %8s %12s %12s %12s\n", "Name", "Type", "Inode", "st_mode", "type");
-    printf("%-20s %8s %12s %12s %12s\n", "----", "----", "-----", "-------", "----");
+    printf("%-20s %8s %12s %12s %12s %12s\n", "Name", "Type", "Inode", "st_mode", "type", "path");
+    printf("%-20s %8s %12s %12s %12s %12s\n", "----", "----", "-----", "-------", "----", "----");
 
     // Read entries one by one
     while ((entry = readdir(dir)) != NULL) {
@@ -33,6 +34,9 @@ int search(const char *phrase) {
         if (entry->d_name[0] == '.') {
             continue;
         }
+
+        // Build full path: path + "/" + filename
+        snprintf(fullpath, sizeof(fullpath), "%s/%s", ".", entry->d_name);
 
         // Get information about this entry
         if (stat(entry->d_name, &statbuf) == -1) {
@@ -53,7 +57,7 @@ int search(const char *phrase) {
             entry->d_type = DT_UNKNOWN;
         }
 
-        printf("%-20s %8d %12ld %12o %12s\n", entry->d_name, entry->d_type, entry->d_ino, statbuf.st_mode, type_str);
+        printf("%-20s %8d %12ld %12o %12s %12s\n", entry->d_name, entry->d_type, entry->d_ino, statbuf.st_mode, type_str, fullpath);
     }
     
     // Always close what you open, Dave
