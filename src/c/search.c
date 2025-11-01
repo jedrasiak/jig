@@ -3,16 +3,17 @@
 
 #include "files.h"
 
-int search(const char *query, const char *path, const char *algorithm);
+int search(const char *path, const char *algorithm, const char *output, const char *query);
 
-int search(const char *query, const char *path, const char *algorithm) {
+int search(const char *path, const char *algorithm, const char *output, const char *query) {
+    printf("path: %s\n", path);
+    printf("algorithm: %s\n", algorithm);
+    printf("output: %s\n", output);
+    printf("query: %s\n", query);
+    printf("---\n\n");
 
     // regex algorithm
-    if (strcmp(algorithm, "--re") == 0) {
-        printf("query: %s\n", query);
-        printf("path: %s\n", path);
-        printf("algorithm: %s\n\n", algorithm);
-
+    if (strcmp(algorithm, "re") == 0) {
         markdown_files_count = 0;
         int errors = get_markdown_files(path, 0);
 
