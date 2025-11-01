@@ -29,8 +29,14 @@ int main(int argc, char *argv[]) {
     if (argc == 3) {
         if (strcmp(argv[1], "nv") == 0) {
             nv(argv[2]);
-        } else if (strcmp(argv[1], "search") == 0) {
-            search(argv[2], ".");
+        } else {
+            help();
+        }
+    }
+
+    if (argc == 4) {
+        if (strcmp(argv[1], "search") == 0) {
+            search(argv[2], ".", argv[3]);
         } else {
             help();
         }
@@ -44,8 +50,12 @@ int help() {
     printf("  scientia <command> [options]\n");
     printf("\n");
     printf("Commands:\n");
-    printf("  nv [path]     Create a new vertex (optional: at specified path, default: current dir)\n");
-    printf("  ne            Create a new edge\n");
+    printf("  nv [path]                   Create a new vertex (optional: at specified path, default: current dir)\n");
+    printf("  ne                          Create a new edge\n");
+    printf("  search <query> <algorithm>  Search for a query using specified algorithm\n");
+    printf("\n");
+    printf("Search Algorithms:\n");
+    printf("  --re             Regular expression search\n");
     printf("\n");
     printf("Options:\n");
     printf("  -h, --help       Show this help message and exit\n");

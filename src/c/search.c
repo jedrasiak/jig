@@ -1,31 +1,39 @@
-#include <dirent.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <errno.h>
 
 #include "files.h"
 
-int search(const char *query, const char *path);
+int search(const char *query, const char *path, const char *algorithm);
 
-int search(const char *query, const char *path) {
-    printf("Searching for: %s in %s\n", query, path);
-    //int errors = traverse(path, 0, detail);
+int search(const char *query, const char *path, const char *algorithm) {
 
-    markdown_files_count = 0;
-    int errors = get_markdown_files(path, 0);
+    // regex algorithm
+    if (strcmp(algorithm, "--re") == 0) {
+        printf("query: %s\n", query);
+        printf("path: %s\n", path);
+        printf("algorithm: %s\n\n", algorithm);
 
-    if (errors > 0) {
-        fprintf(stderr, "\nCompleted with %d errors\n", errors);
-        return 1;
-    } else {
-        for (int i = 0; i < markdown_files_count; i++) {
-            printf("%d: %s\n", i + 1, markdown_files_list[i]);
+        markdown_files_count = 0;
+        int errors = get_markdown_files(path, 0);
+
+        if (errors > 0) {
+            fprintf(stderr, "\nCompleted with %d errors\n", errors);
+            return 1;
+        } else {
+            for (int i = 0; i < markdown_files_count; i++) {
+                //printf("%d: %s\n", i + 1, markdown_files_list[i]);
+                char *path = markdown_files_list[i];
+                printf("%s:\n", path);
+            }
         }
+
+        return 0;
+    } else {
+        fprintf(stderr, "Error: Unknown search algorithm '%s'\n", algorithm);
+        return 1;
     }
 
-    return 0;
+
 }
 
 
