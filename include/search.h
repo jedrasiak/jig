@@ -8,6 +8,6 @@
     * @return 0 on success, 1 on failure
 */
 
-int search(const char *query);
+int search(const char *query, const char *path);
 
 #endif // SEARCH_H

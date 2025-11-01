@@ -3,28 +3,50 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <errno.h>
 
-int search(const char *phrase) {
+#define MAX_DEPTH 100
+#define MAX_PATH 4096
+
+int traverse(const char *path, int depth);
+int search(const char *query, const char *path);
+
+int search(const char *query, const char *path) {
+    printf("Searching for: %s in %s\n", query, path);
+    int errors = traverse(path, 0);
+
+    if (errors > 0) {
+        fprintf(stderr, "\nCompleted with %d errors\n", errors);
+        return 1;
+    }
+
+    return 0;
+}
+
+int traverse(const char *path, int depth) {
     DIR *dir;
     struct dirent *entry;
     struct stat statbuf;
-    char fullpath[1024];
-    
-    // Open the current directory
-    dir = opendir(".");
-    
-    if (dir == NULL) {
-        printf("Failed to open directory\n");
+    char fullpath[MAX_PATH];
+    int errors = 0;
+
+    // Safety check for depth
+    if (depth > MAX_DEPTH) {
+        fprintf(stderr, "Max depth exceeded: %s\n", path);
         return 1;
     }
-    
-    printf("Searching for: %s\n", phrase);
-    printf("%-20s %8s %12s %12s %12s %12s\n", "Name", "Type", "Inode", "st_mode", "type", "path");
-    printf("%-20s %8s %12s %12s %12s %12s\n", "----", "----", "-----", "-------", "----", "----");
 
-    // Read entries one by one
+    // Open the current directory
+    dir = opendir(path);
+
+    if (dir == NULL) {
+        fprintf(stderr, "Cannot open %s: %s\n", path, strerror(errno));
+        return 1;
+    }
+
+    // First pass: collect and print files
     while ((entry = readdir(dir)) != NULL) {
-        
+
         // skip . and ..
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
@@ -36,32 +58,82 @@ int search(const char *phrase) {
         }
 
         // Build full path: path + "/" + filename
-        snprintf(fullpath, sizeof(fullpath), "%s/%s", ".", entry->d_name);
-
-        // Get information about this entry
-        if (stat(entry->d_name, &statbuf) == -1) {
-            printf("Failed to stat %s\n", entry->d_name);
+        // Check if path would overflow
+        int len = snprintf(fullpath, MAX_PATH, "%s/%s", path, entry->d_name);
+        if (len >= MAX_PATH) {
+            fprintf(stderr, "Path too long: %s/%s\n", path, entry->d_name);
+            errors++;
             continue;
         }
-        
-        // get type as string
-        char type_str[4];
 
-        if (S_ISDIR(statbuf.st_mode)) {
-            entry->d_type = DT_DIR;
-            strcpy(type_str, "DIR");
-        } else if (S_ISREG(statbuf.st_mode)) {
-            entry->d_type = DT_REG;
-            strcpy(type_str, "REG");
-        } else {
-            entry->d_type = DT_UNKNOWN;
+        // Get information about this entry
+        if (stat(fullpath, &statbuf) == -1) {
+            fprintf(stderr, "Cannot stat %s: %s\n", fullpath, strerror(errno));
+            errors++;
+            continue;
         }
 
-        printf("%-20s %8d %12ld %12o %12s %12s\n", entry->d_name, entry->d_type, entry->d_ino, statbuf.st_mode, type_str, fullpath);
+        // Only process regular files in this pass
+        if (S_ISREG(statbuf.st_mode)) {
+            // skip not .md files
+            if (strstr(entry->d_name, ".md") != NULL) {
+                // Print with indentation
+                for (int i = 0; i < depth; i++) {
+                    printf("│   ");
+                }
+                printf("├── %s\n", entry->d_name);
+            }
+        }
     }
-    
+
+    // Rewind to read directory again for subdirectories
+    rewinddir(dir);
+
+    // Second pass: process directories
+    while ((entry = readdir(dir)) != NULL) {
+
+        // skip . and ..
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        // skip hidden files
+        if (entry->d_name[0] == '.') {
+            continue;
+        }
+
+        // Build full path: path + "/" + filename
+        // Check if path would overflow
+        int len = snprintf(fullpath, MAX_PATH, "%s/%s", path, entry->d_name);
+        if (len >= MAX_PATH) {
+            fprintf(stderr, "Path too long: %s/%s\n", path, entry->d_name);
+            errors++;
+            continue;
+        }
+
+        // Get information about this entry
+        if (stat(fullpath, &statbuf) == -1) {
+            fprintf(stderr, "Cannot stat %s: %s\n", fullpath, strerror(errno));
+            errors++;
+            continue;
+        }
+
+        // Only process directories in this pass
+        if (S_ISDIR(statbuf.st_mode)) {
+            // Print with indentation
+            for (int i = 0; i < depth; i++) {
+                printf("│   ");
+            }
+            printf("├── %s/\n", entry->d_name);
+
+            // RECURSION HAPPENS HERE
+            errors += traverse(fullpath, depth + 1);
+        }
+    }
+
     // Always close what you open, Dave
     closedir(dir);
 
-    return 0;
+    return errors;
+
 }

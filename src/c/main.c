@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[1], "nv") == 0) {
             nv(argv[2]);
         } else if (strcmp(argv[1], "search") == 0) {
-            search(argv[2]);
+            search(argv[2], ".");
         } else {
             help();
         }
