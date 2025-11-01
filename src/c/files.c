@@ -4,15 +4,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
+#include "files.h"
 
-#define MAX_PATH 4096
-#define MAX_FILES 1024
-#define MAX_DEPTH 100
+char markdown_files_list[MAX_FILES][MAX_PATH];
+int markdown_files_count = 0;
 
-char list[MAX_FILES][MAX_PATH];
-int file_count = 0;
-
-int list_markdown_files(const char *path, int depth) {
+int get_markdown_files(const char *path, int depth) {
     DIR *dir;
     struct dirent *entry;
     struct stat statbuf;
@@ -26,7 +23,7 @@ int list_markdown_files(const char *path, int depth) {
     }
 
     // Safety check for file count
-    if (file_count >= MAX_FILES) {
+    if (markdown_files_count >= MAX_FILES) {
         fprintf(stderr, "Max file limit reached (%d files)\n", MAX_FILES);
         return 1;
     }
@@ -70,9 +67,9 @@ int list_markdown_files(const char *path, int depth) {
             // check if it's a .md file
             if (strstr(entry->d_name, ".md") != NULL) {
                 // Check if we have space in the list
-                if (file_count < MAX_FILES) {
-                    snprintf(list[file_count], MAX_PATH, "%s", fullpath);
-                    file_count++;
+                if (markdown_files_count < MAX_FILES) {
+                    snprintf(markdown_files_list[markdown_files_count], MAX_PATH, "%s", fullpath);
+                    markdown_files_count++;
                 } else {
                     fprintf(stderr, "Max file limit reached (%d files)\n", MAX_FILES);
                     closedir(dir);
@@ -115,7 +112,7 @@ int list_markdown_files(const char *path, int depth) {
         // Only process directories in this pass
         if (S_ISDIR(statbuf.st_mode)) {
             // Recursively traverse subdirectory
-            errors += list_markdown_files(fullpath, depth + 1);
+            errors += get_markdown_files(fullpath, depth + 1);
         }
     }
 
@@ -130,15 +127,15 @@ int main() {
     const char *path = ".";  // Current directory
 
     // Reset counter
-    file_count = 0;
+    markdown_files_count = 0;
 
     // List all markdown files
-    int errors = list_markdown_files(path, 0);
+    int errors = get_markdown_files(path, 0);
 
     // Print results
-    printf("Found %d markdown files:\n", file_count);
-    for (int i = 0; i < file_count; i++) {
-        printf("%d: %s\n", i + 1, list[i]);
+    printf("Found %d markdown files:\n", markdown_files_count);
+    for (int i = 0; i < markdown_files_count; i++) {
+        printf("%d: %s\n", i + 1, markdown_files_list[i]);
     }
 
     if (errors > 0) {
