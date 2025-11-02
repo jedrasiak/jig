@@ -12,7 +12,7 @@ int re(const char *pattern, const char *string) {
     int count = 0;
     
     // compile the regex pattern
-    if (regcomp(&regex, pattern, REG_EXTENDED) != 0) {
+    if (regcomp(&regex, pattern, REG_EXTENDED | REG_ICASE) != 0) {
         fprintf(stderr, "Could not compile pattern: %s\n", pattern);
         return -1;
     }
