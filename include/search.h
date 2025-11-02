@@ -4,12 +4,13 @@
 /**
     * Searches for a query string within the graph's vertices.
     *
-    * @param query The search query string
     * @param path The path to start the search from
     * @param algorithm The search algorithm to use (e.g., "BFS", "DFS")
+    * @param output The output format (e.g., "stdout", "out.csv")
+    * @param query The search query string
     * @return 0 on success, 1 on failure
 */
 
-int search(const char *query, const char *path, const char *algorithm);
+int search(const char *path, const char *algorithm, const char *output, const char *query);
 
 #endif // SEARCH_H
