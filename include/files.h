@@ -5,9 +5,9 @@
 #define MAX_FILES 1024
 #define MAX_DEPTH 100
 
-extern char markdown_files_list[MAX_FILES][MAX_PATH];
-extern int markdown_files_count;
+extern char text_files_list[MAX_FILES][MAX_PATH];
+extern int text_files_count;
 
-int get_markdown_files(const char *path, int depth);
+int get_text_files(const char *path, int depth);
 
 #endif

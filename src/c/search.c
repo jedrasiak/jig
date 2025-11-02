@@ -14,16 +14,16 @@ int search(const char *path, const char *algorithm, const char *output, const ch
 
     // regex algorithm
     if (strcmp(algorithm, "re") == 0) {
-        markdown_files_count = 0;
-        int errors = get_markdown_files(path, 0);
+        text_files_count = 0;
+        int errors = get_text_files(path, 0);
 
         if (errors > 0) {
             fprintf(stderr, "\nCompleted with %d errors\n", errors);
             return 1;
         } else {
-            for (int i = 0; i < markdown_files_count; i++) {
-                //printf("%d: %s\n", i + 1, markdown_files_list[i]);
-                char *path = markdown_files_list[i];
+            for (int i = 0; i < text_files_count; i++) {
+                //printf("%d: %s\n", i + 1, text_files_list[i]);
+                char *path = text_files_list[i];
                 printf("%s:\n", path);
             }
         }
