@@ -31,6 +31,22 @@ int search(const char *path, const char *algorithm, const char *format, const ch
     printf("---\n\n");
     */
 
+    // validate inputs
+    if (!path || !algorithm || !format || !query) {
+        fprintf(stderr, "Error: Invalid arguments to search function\n");
+        return 1;
+    }
+
+    if (strcmp(algorithm, "re") != 0) {
+        fprintf(stderr, "Error: Unknown algorithm '%s'\n", algorithm);
+        return 1;
+    }
+
+    if (strcmp(format, "table") != 0 && strcmp(format, "csv") != 0) {
+        fprintf(stderr, "Error: Unknown format '%s'\n", format);
+        return 1;
+    }
+
     // regex algorithm
     if (strcmp(algorithm, "re") == 0) {
         text_files_count = 0;
@@ -118,10 +134,10 @@ int search(const char *path, const char *algorithm, const char *format, const ch
         }
 
         return 0;
-    } else {
-        fprintf(stderr, "Error: Unknown search algorithm '%s'\n", algorithm);
-        return 1;
     }
+
+    // should never reach here due to validation above
+    return 1;
 }
 
 
