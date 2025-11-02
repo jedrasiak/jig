@@ -6,11 +6,11 @@
     *
     * @param path The path to start the search from
     * @param algorithm The search algorithm to use (e.g., "BFS", "DFS")
-    * @param output The output format (e.g., "stdout", "out.csv")
+    * @param format The output format (e.g., "table", "csv")
     * @param query The search query string
     * @return 0 on success, 1 on failure
 */
 
-int search(const char *path, const char *algorithm, const char *output, const char *query);
+int search(const char *path, const char *algorithm, const char *format, const char *query);
 
 #endif // SEARCH_H

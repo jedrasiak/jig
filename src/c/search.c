@@ -3,12 +3,12 @@
 
 #include "files.h"
 
-int search(const char *path, const char *algorithm, const char *output, const char *query);
+int search(const char *path, const char *algorithm, const char *format, const char *query);
 
-int search(const char *path, const char *algorithm, const char *output, const char *query) {
+int search(const char *path, const char *algorithm, const char *format, const char *query) {
     printf("path: %s\n", path);
     printf("algorithm: %s\n", algorithm);
-    printf("output: %s\n", output);
+    printf("format: %s\n", format);
     printf("query: %s\n", query);
     printf("---\n\n");
 

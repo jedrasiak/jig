@@ -61,17 +61,17 @@ int cmd_search(int argc, char *argv[]) {
                         "Options:\n"
                         "  -p <path>          Path to start the search from (default: current directory)\n"
                         "  -a <algorithm>     Search algorithm to use (e.g., re)\n"
-                        "  -o <output>        Output format (e.g., stdout, out.csv)\n";
+                        "  -f <format>        Output format (e.g., table, csv)\n";
 
     char *path = ".";
     char *algorithm = NULL;
-    char *output = NULL;
+    char *format = NULL;
     char *query = NULL;
     
     optind++; // Move to the next argument after subcommand
 
     // Parse options for the 'search' subcommand
-    while ((opt = getopt(argc, argv, "+:p:a:o:")) != -1) {
+    while ((opt = getopt(argc, argv, "+:p:a:f:")) != -1) {
         switch (opt) {
             case 'p':
                 path = optarg;
@@ -79,8 +79,8 @@ int cmd_search(int argc, char *argv[]) {
             case 'a':
                 algorithm = optarg;
                 break;
-            case 'o':
-                output = optarg;
+            case 'f':
+                format = optarg;
                 break;
             case ':':
                 fprintf(stderr, "Error: -%c requires an argument\n", optopt);
@@ -112,13 +112,13 @@ int cmd_search(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
     
-    if (!output) {
-        fprintf(stderr, "Error: -o <output> is required\n");
+    if (!format) {
+        fprintf(stderr, "Error: -f <format> is required\n");
         fprintf(stderr, "%s\n", usage);
         exit(EXIT_FAILURE);
     }
 
-    int result = search(path, algorithm, output, query);
+    int result = search(path, algorithm, format, query);
 
     return result;
 }
@@ -156,7 +156,7 @@ int print_help() {
     printf("  Options:\n");
     printf("    -p <path>      Path to start the search from (default: current directory)\n");
     printf("    -a <algorithm> Search algorithm to use (required, e.g., 're' for regex)\n");
-    printf("    -o <output>    Output format (required, e.g., 'stdout', 'out.csv')\n");
+    printf("    -f <format>    Output format (required, e.g., 'table', 'csv')\n");
     return 0;
 }
 
