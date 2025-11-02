@@ -5,14 +5,31 @@
 #include "files.h"
 #include "re.h"
 
+typedef struct {
+    char *file_path;
+    int score;
+    int rank;
+} SearchResult;
+
+int compare_results(const void *a, const void *b);
 int search(const char *path, const char *algorithm, const char *format, const char *query);
 
+int compare_results(const void *a, const void *b) {
+    const SearchResult *result_a = (const SearchResult *)a;
+    const SearchResult *result_b = (const SearchResult *)b;
+    // descending order: higher scores first
+    return result_b->score - result_a->score;
+}
+
 int search(const char *path, const char *algorithm, const char *format, const char *query) {
+    // Debugging Information
+    /*
     printf("path: %s\n", path);
     printf("algorithm: %s\n", algorithm);
     printf("format: %s\n", format);
     printf("query: %s\n", query);
     printf("---\n\n");
+    */
 
     // regex algorithm
     if (strcmp(algorithm, "re") == 0) {
@@ -23,6 +40,15 @@ int search(const char *path, const char *algorithm, const char *format, const ch
             fprintf(stderr, "\nCompleted with %d errors\n", errors);
             return 1;
         } else {
+            // allocate results array
+            SearchResult *results = malloc(text_files_count * sizeof(SearchResult));
+            if (!results) {
+                fprintf(stderr, "Error: Could not allocate memory for results\n");
+                return 1;
+            }
+
+            int results_count = 0;
+
             for (int i = 0; i < text_files_count; i++) {
                 char *file_path = text_files_list[i];
 
@@ -53,14 +79,42 @@ int search(const char *path, const char *algorithm, const char *format, const ch
                 // search for matches
                 int count = re(query, content);
 
-                // print result
+                // collect result if matches found
                 if (count > 0) {
-                    printf("%s: %d\n", file_path, count);
+                    results[results_count].file_path = file_path;
+                    results[results_count].score = count;
+                    results[results_count].rank = 0;
+                    results_count++;
                 }
 
                 // cleanup
                 free(content);
             }
+
+            // sort results by count (descending)
+            qsort(results, results_count, sizeof(SearchResult), compare_results);
+
+            // assign ranks
+            for (int i = 0; i < results_count; i++) {
+                results[i].rank = i + 1;
+            }
+
+            // return results in specified format
+            if (strcmp(format, "table") == 0) {
+                printf("%-50s %-10s %-5s\n", "File Path", "Score", "Rank");
+                printf("---------------------------------------------------------------\n");
+                for (int i = 0; i < results_count; i++) {
+                    printf("%-50s %-10d %-5d\n", results[i].file_path, results[i].score, results[i].rank);
+                }
+            } else if (strcmp(format, "csv") == 0) {
+                printf("path,score,rank\n");
+                for (int i = 0; i < results_count; i++) {
+                    printf("%s,%d,%d\n", results[i].file_path, results[i].score, results[i].rank);
+                }
+            }
+
+            // cleanup
+            free(results);
         }
 
         return 0;
