@@ -117,15 +117,15 @@ int search(const char *path, const char *algorithm, const char *format, const ch
 
             // return results in specified format
             if (strcmp(format, "table") == 0) {
-                printf("%-50s %-10s %-5s\n", "File Path", "Score", "Rank");
+                printf("%-5s %-10s %s", "Rank", "Score", "Path\n");
                 printf("---------------------------------------------------------------\n");
                 for (int i = 0; i < results_count; i++) {
-                    printf("%-50s %-10d %-5d\n", results[i].file_path, results[i].score, results[i].rank);
+                    printf("%-5d %-10d %s\n", results[i].rank, results[i].score, results[i].file_path);
                 }
             } else if (strcmp(format, "csv") == 0) {
-                printf("path,score,rank\n");
+                printf("rank,score,path\n");
                 for (int i = 0; i < results_count; i++) {
-                    printf("%s,%d,%d\n", results[i].file_path, results[i].score, results[i].rank);
+                    printf("%d,%d,%s\n", results[i].rank, results[i].score, results[i].file_path);
                 }
             }
 
