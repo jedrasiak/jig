@@ -141,7 +141,7 @@ int cmd_nv(int argc, char *argv[]) {
 
 int print_help() {
     printf("Usage:\n");
-    printf("  scientia [OPTIONS] <command> [COMMAND_OPTIONS]\n");
+    printf("  jig [OPTIONS] <command> [COMMAND_OPTIONS]\n");
     printf("\n");
     printf("Global Options:\n");
     printf("  -h               Show this help message and exit\n");
@@ -152,7 +152,7 @@ int print_help() {
     printf("  search           Search for a query in the knowledge graph\n");
     printf("\n");
     printf("Search Command:\n");
-    printf("  Usage: scientia search [OPTIONS] <query>\n");
+    printf("  Usage: jig search [OPTIONS] <query>\n");
     printf("  Options:\n");
     printf("    -p <path>      Path to start the search from (default: current directory)\n");
     printf("    -a <algorithm> Search algorithm to use (required, e.g., 're' for regex)\n");
@@ -166,7 +166,7 @@ int print_version() {
 }
 
 int print_usage() {
-    printf("Usage: scientia <command> [OPTIONS]\n");
-    printf("Try 'scientia -h' for more information.\n");
+    printf("Usage: jig <command> [OPTIONS]\n");
+    printf("Try 'jig -h' for more information.\n");
     return 0;
 }

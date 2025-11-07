@@ -9,7 +9,7 @@ BASHRC="$HOME/.bashrc"
 
 # --- CHECKS ---
 if [ ! -d "$BIN_DIR" ]; then
-  echo "⚠️  Warning: bin directory does not exist yet. Creating it..."
+  echo "Warning: bin directory does not exist yet. Creating it..."
   mkdir -p "$BIN_DIR"
 fi
 
@@ -19,16 +19,16 @@ EXPORT_LINE="export PATH=\"\$PATH:$BIN_DIR\""
 # --- APPLY CHANGES ---
 # Only add the line if it's not already in .bashrc
 if ! grep -Fxq "$EXPORT_LINE" "$BASHRC"; then
-  echo -e "\n# Added by Scientia setup script" >> "$BASHRC"
+  echo -e "\n# Added by jig setup script" >> "$BASHRC"
   echo "$EXPORT_LINE" >> "$BASHRC"
-  echo "✅ Added $BIN_DIR to PATH in $BASHRC"
+  echo "Added $BIN_DIR to PATH in $BASHRC"
 else
-  echo "ℹ️  $BIN_DIR already in PATH (nothing changed)"
+  echo "$BIN_DIR already in PATH (nothing changed)"
 fi
 
 # Reload shell config
-echo "🔄 Reloading shell..."
+echo "Reloading shell..."
 source "$BASHRC"
 
-echo "✅ Done! You can now run binaries from:"
-echo "   $BIN_DIR"
+echo "Done! You can now run binaries from:"
+echo "$BIN_DIR"

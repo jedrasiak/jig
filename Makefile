@@ -1,23 +1,23 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Wextra -I./include
+CFLAGS = -Wall -Wextra -I./include -I./vendor/cjson
 LDFLAGS =
 
 # Directories
-SRC_DIR = src/c
-LIB_DIR = lib
+SRC_DIR = src
+LIB_DIR = vendor/cjson
 BUILD_DIR = build
 BIN_DIR = bin
 INCLUDE_DIR = include
 
 # Target executable
-TARGET = $(BIN_DIR)/scientia
+TARGET = $(BIN_DIR)/jig
 
-# Source files (all .c files in src/c/ and lib/)
+# Source files (all .c files in src/ and vendor/cjson/)
 SOURCES = $(wildcard $(SRC_DIR)/*.c)
 LIB_SOURCES = $(wildcard $(LIB_DIR)/*.c)
 
-# Object files (convert src/c/file.c to build/file.o and lib/file.c to build/file.o)
+# Object files (convert src/file.c to build/file.o and vendor/cjson/file.c to build/file.o)
 OBJECTS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SOURCES))
 LIB_OBJECTS = $(patsubst $(LIB_DIR)/%.c,$(BUILD_DIR)/%.o,$(LIB_SOURCES))
 
