@@ -49,17 +49,30 @@ int search(const char *path, const char *algorithm, const char *format, const ch
 
     // regex algorithm
     if (strcmp(algorithm, "re") == 0) {
-        text_files_count = 0;
+        // First pass: count files
+        int file_count = count_text_files(path, 0);
+
+        if (file_count == 0) {
+            printf("No text files found\n");
+            return 0;
+        }
+
+        // Allocate the text files list
+        init_text_files_list(file_count);
+
+        // Second pass: populate the list
         int errors = get_text_files(path, 0);
 
         if (errors > 0) {
             fprintf(stderr, "\nCompleted with %d errors\n", errors);
+            free_text_files_list();
             return 1;
         } else {
             // allocate results array
             SearchResult *results = malloc(text_files_count * sizeof(SearchResult));
             if (!results) {
                 fprintf(stderr, "Error: Could not allocate memory for results\n");
+                free_text_files_list();
                 return 1;
             }
 
@@ -131,6 +144,7 @@ int search(const char *path, const char *algorithm, const char *format, const ch
 
             // cleanup
             free(results);
+            free_text_files_list();
         }
 
         return 0;
