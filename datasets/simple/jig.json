@@ -1,0 +1,5 @@
+{
+    "exclude": [
+        "should_be_excluded"
+    ]
+}
