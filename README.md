@@ -1,4 +1,20 @@
-# scientia
+# jedrasiak:jig
+
+## Unix philosophy
+- Write programs that do one thing and do it well.
+- Write programs to work together.
+- Write programs to handle text streams, because that is a universal interface.
+
+### Filtering files
+```bash
+find . -type f -iname "*.md"
+find . -type f \( -iname "*.md" -o -iname "*.txt" \)
+```
+
+### Performance measuring
+```bash
+hyperfine "rg -l -i newag" "find . -type f \( -iname '*.md' -o -iname '*.txt' \) | jig-search-re 'newag'"
+```
 
 ## Development
 
@@ -26,24 +42,9 @@ make rebuild
 make info
 ```
 
-### Project Structure
-
-```
-scientia/
-├── include/          # Header files (.h)
-│   └── nv.h
-├── src/c/            # Source files (.c)
-│   ├── main.c
-│   └── nv.c
-├── build/            # Object files (.o) - generated
-├── bin/              # Compiled executable - generated
-│   └── scientia
-└── Makefile          # Build configuration
-```
-
 ### Manual Build (without Make)
 
 If you prefer to compile manually:
 ```bash
-gcc -Wall -Wextra -I./include src/c/main.c src/c/nv.c -o bin/scientia
+gcc -Wall -Wextra -I./include src/c/main.c src/c/nv.c -o bin/jig
 ```

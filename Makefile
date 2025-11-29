@@ -10,24 +10,32 @@ BUILD_DIR = build
 BIN_DIR = bin
 INCLUDE_DIR = include
 
-# Target executable
-TARGET = $(BIN_DIR)/jig
+# Target executables
+TARGET_JIG = $(BIN_DIR)/jig
+TARGET_SEARCH = $(BIN_DIR)/jig-search-re
 
-# Source files (all .c files in src/ and vendor/cjson/)
-SOURCES = $(wildcard $(SRC_DIR)/*.c)
+# Source files
+JIG_SOURCES = $(SRC_DIR)/main.c
+SEARCH_SOURCES = $(SRC_DIR)/jig-search-re.c
 LIB_SOURCES = $(wildcard $(LIB_DIR)/*.c)
 
-# Object files (convert src/file.c to build/file.o and vendor/cjson/file.c to build/file.o)
-OBJECTS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SOURCES))
+# Object files
+JIG_OBJECTS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(JIG_SOURCES))
+SEARCH_OBJECTS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SEARCH_SOURCES))
 LIB_OBJECTS = $(patsubst $(LIB_DIR)/%.c,$(BUILD_DIR)/%.o,$(LIB_SOURCES))
 
-# Default target
-all: $(TARGET)
+# Default target - build both executables
+all: $(TARGET_JIG) $(TARGET_SEARCH)
 
-# Link object files to create executable
-$(TARGET): $(OBJECTS) $(LIB_OBJECTS) | $(BIN_DIR)
-	@$(CC) $(OBJECTS) $(LIB_OBJECTS) $(LDFLAGS) -o $(TARGET)
-	@echo "LD $(TARGET)"
+# Link jig executable
+$(TARGET_JIG): $(JIG_OBJECTS) $(LIB_OBJECTS) | $(BIN_DIR)
+	@$(CC) $(JIG_OBJECTS) $(LIB_OBJECTS) $(LDFLAGS) -o $(TARGET_JIG)
+	@echo "LD $(TARGET_JIG)"
+
+# Link jig-search executable
+$(TARGET_SEARCH): $(SEARCH_OBJECTS) $(LIB_OBJECTS) | $(BIN_DIR)
+	@$(CC) $(SEARCH_OBJECTS) $(LIB_OBJECTS) $(LDFLAGS) -o $(TARGET_SEARCH)
+	@echo "LD $(TARGET_SEARCH)"
 
 # Compile .c files to .o files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
@@ -48,7 +56,7 @@ $(BIN_DIR):
 
 # Clean build artifacts
 clean:
-	@rm -rf $(BUILD_DIR)/*.o $(TARGET)
+	@rm -rf $(BUILD_DIR)/*.o $(TARGET_JIG) $(TARGET_SEARCH)
 	@echo "CLEAN"
 
 # Rebuild from scratch
@@ -56,11 +64,13 @@ rebuild: clean all
 
 # Show what would be built
 info:
-	@echo "Sources:     $(SOURCES)"
-	@echo "Lib Sources: $(LIB_SOURCES)"
-	@echo "Objects:     $(OBJECTS)"
-	@echo "Lib Objects: $(LIB_OBJECTS)"
-	@echo "Target:      $(TARGET)"
-	@echo "Include:     -I$(INCLUDE_DIR)"
+	@echo "Jig Sources:     $(JIG_SOURCES)"
+	@echo "Search Sources:  $(SEARCH_SOURCES)"
+	@echo "Lib Sources:     $(LIB_SOURCES)"
+	@echo "Jig Objects:     $(JIG_OBJECTS)"
+	@echo "Search Objects:  $(SEARCH_OBJECTS)"
+	@echo "Lib Objects:     $(LIB_OBJECTS)"
+	@echo "Targets:         $(TARGET_JIG) $(TARGET_SEARCH)"
+	@echo "Include:         -I$(INCLUDE_DIR)"
 
 .PHONY: all clean rebuild info
