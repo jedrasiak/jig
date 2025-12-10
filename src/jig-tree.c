@@ -3,92 +3,69 @@
 #include <limits.h>
 #include <string.h>
 
-// gcc -Wall -Wextra -Werror tree.c -o tree
-// find . -type f -name "*.md" | ./tree
+/*
+gcc -Wall -Wextra -Werror src/jig-tree.c -o bin/jig-tree
+find datasets/simple -type f -name "*.md" | jig-tree
+find datasets/simple -type f -name "*.md" | valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes bin/jig-tree
+*/
 
 int main() {
-    printf("tree.c\n");
-
-    char filepath[PATH_MAX];
     int items = 0;
-    char **filearr = NULL;
+    char filepath[PATH_MAX];
+
+    // data structure for tree node
+    typedef struct {
+        uint id;
+        char *path;
+    } Node;
+
+    Node *nodes = NULL;
 
     while (fgets(filepath, sizeof(filepath), stdin) != NULL) {
         // Remove trailing newline if present
         filepath[strcspn(filepath, "\n")] = '\0';
 
-        // Grow array
-        char **tmp = realloc(filearr, (items + 1) * sizeof(char*));
+        // Grow array of nodes
+        Node *tmp = realloc(nodes, (items + 1) * sizeof(Node));
         if (tmp == NULL) {
-            // Free previously allocated memory
-            for (int i = 0; i < items; i++) {
-                free(filearr[i]);
-            }
-            free(filearr);
+            free(nodes);
             fprintf(stderr, "Realloc failed\n");
             exit(EXIT_FAILURE);
         }
-        filearr = tmp;
+        nodes = tmp;
 
-        // Allocate and copy the filepath
-        filearr[items] = malloc(strlen(filepath) + 1);
-        if (filearr[items] == NULL) {
+        // Allocate array for path
+        nodes[items].path = malloc(strlen(filepath) + 1);
+        if (nodes[items].path == NULL) {
             for (int i = 0; i < items; i++) {
-                free(filearr[i]);
+                free(nodes[i].path);
             }
-            free(filearr);
+            free(nodes);
             fprintf(stderr, "Malloc failed\n");
             exit(EXIT_FAILURE);
         }
-        strcpy(filearr[items], filepath);
+
+        // Attach data to node
+        nodes[items].id = items;
+        strcpy(nodes[items].path, filepath);
 
         items++;
     }
 
     for (int i = 0; i < items; i++) {
-        printf("%p | %s\n", (void*)&filearr[i], filearr[i]);
-
-        FILE *fptr;
-        // open file
-        if ((fptr = fopen(filearr[i], "r")) == NULL) {
-            fprintf(stderr, "File open failed");
-            exit(EXIT_FAILURE);
-        }
-
-        // read file
-        /*
-        int ch;
-        while((ch = getc(fptr)) != EOF) {
-            putc(ch,stdout);
-        }
-        */
-        fseek(fptr, 0L, SEEK_END);
-        long fend = ftell(fptr);
-        //printf("%ld\n", fend);
-        fseek(fptr, 0L, SEEK_SET);
-
-        char *fcont = malloc(fend + 1);
-
-        for (int i = 0; i < fend; i++) {
-            fcont[i] = getc(fptr);
-        }
-        fcont[fend] = '\0';
-
-        printf("%s\n", fcont);
-        free(fcont);
-
-        // close file
-        if (fclose(fptr) != 0) {
-            fprintf(stderr, "File close failed");
-            exit(EXIT_FAILURE);
-        }
+        printf("%p | %3d | %s\n", (void*)&nodes[i], nodes[i].id, nodes[i].path);
     }
 
-    // Free all allocated memory
+    // Free allocated memory
     for (int i = 0; i < items; i++) {
-        free(filearr[i]);
+        free(nodes[i].path);
     }
-    free(filearr);
+    free(nodes);
+
+    printf("---\n");
+    printf("Node struct: %zu\n", sizeof(Node));
+    printf("Node array: %zu\n", items * sizeof(Node));
+    printf("---\n");
 
     return 0;
 }
