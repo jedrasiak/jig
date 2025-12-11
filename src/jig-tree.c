@@ -10,7 +10,6 @@ find datasets/simple -type f -name "*.md" | valgrind --leak-check=full --show-le
 */
 
 int main() {
-    int items = 0;
     char filepath[PATH_MAX];
 
     // data structure for tree node
@@ -22,6 +21,19 @@ int main() {
     } Node;
 
     Node *nodes = NULL;
+    int nodes_count = 0;
+
+    // data structure for edge
+    /*
+    typedef struct {
+        uint src;
+        uint dst;
+        char *label;
+    } Edge;
+
+    Edge *edges = NULL;
+    int edges_count = 0;
+    */
 
     // build collection of nodes
     while (fgets(filepath, sizeof(filepath), stdin) != NULL) {
@@ -29,7 +41,7 @@ int main() {
         filepath[strcspn(filepath, "\n")] = '\0';
 
         // Grow array of nodes
-        Node *tmp = realloc(nodes, (items + 1) * sizeof(Node));
+        Node *tmp = realloc(nodes, (nodes_count + 1) * sizeof(Node));
         if (tmp == NULL) {
             free(nodes);
             fprintf(stderr, "Realloc failed\n");
@@ -38,9 +50,9 @@ int main() {
         nodes = tmp;
 
         // Allocate array for path
-        nodes[items].path = malloc(strlen(filepath) + 1);
-        if (nodes[items].path == NULL) {
-            for (int i = 0; i < items; i++) {
+        nodes[nodes_count].path = malloc(strlen(filepath) + 1);
+        if (nodes[nodes_count].path == NULL) {
+            for (int i = 0; i < nodes_count; i++) {
                 free(nodes[i].path);
             }
             free(nodes);
@@ -49,15 +61,14 @@ int main() {
         }
 
         // Attach data to node
-        nodes[items].id = items;
-        strcpy(nodes[items].path, filepath);
+        nodes[nodes_count].id = nodes_count;
+        strcpy(nodes[nodes_count].path, filepath);
 
-        items++;
+        nodes_count++;
     }
 
     // fetch nodes content
-    for (int i = 0; i < items; i++) {
-
+    for (int i = 0; i < nodes_count; i++) {
         // open file
         FILE *fptr;
         if ((fptr = fopen(nodes[i].path, "r")) == NULL) {
@@ -90,7 +101,7 @@ int main() {
     }
 
     // print nodes
-    for (int i = 0; i < items; i++) {
+    for (int i = 0; i < nodes_count; i++) {
         if (i == 0) {
             printf("       address |  id |     size | path\n");
             printf("---------------+-----+----------+------------------------------\n");
@@ -101,11 +112,11 @@ int main() {
     // print memory usage
     printf("---\n");
     printf("Node struct: %zu\n", sizeof(Node));
-    printf("Node array: %zu\n", items * sizeof(Node));
+    printf("Node array: %zu\n", nodes_count * sizeof(Node));
     printf("---\n");
 
     // Free allocated memory
-    for (int i = 0; i < items; i++) {
+    for (int i = 0; i < nodes_count; i++) {
         free(nodes[i].path);
         free(nodes[i].content);
     }
