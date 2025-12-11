@@ -17,10 +17,13 @@ int main() {
     typedef struct {
         uint id;
         char *path;
+        long size;
+        char *content;
     } Node;
 
     Node *nodes = NULL;
 
+    // build collection of nodes
     while (fgets(filepath, sizeof(filepath), stdin) != NULL) {
         // Remove trailing newline if present
         filepath[strcspn(filepath, "\n")] = '\0';
@@ -52,20 +55,61 @@ int main() {
         items++;
     }
 
+    // fetch nodes content
     for (int i = 0; i < items; i++) {
-        printf("%p | %3d | %s\n", (void*)&nodes[i], nodes[i].id, nodes[i].path);
+
+        // open file
+        FILE *fptr;
+        if ((fptr = fopen(nodes[i].path, "r")) == NULL) {
+            fprintf(stderr, "File open failed");
+            exit(EXIT_FAILURE);
+        }
+        
+        // read file length
+        fseek(fptr, 0L, SEEK_END);
+        nodes[i].size = ftell(fptr);
+        fseek(fptr, 0L, SEEK_SET);
+
+        // read file content
+        nodes[i].content = malloc(nodes[i].size + 1);
+        if (nodes[i].content == NULL) {
+            fprintf(stderr, "Malloc failed\n");
+            exit(EXIT_FAILURE);
+        }
+
+        for (int j = 0; j < nodes[i].size; j++) {
+            nodes[i].content[j] = fgetc(fptr);
+        }
+        nodes[i].content[nodes[i].size] = '\0';
+
+        // close file
+        if (fclose(fptr) != 0) {
+            fprintf(stderr, "File close failed");
+            exit(EXIT_FAILURE);
+        }
     }
 
-    // Free allocated memory
+    // print nodes
     for (int i = 0; i < items; i++) {
-        free(nodes[i].path);
+        if (i == 0) {
+            printf("       address |  id |     size | path\n");
+            printf("---------------+-----+----------+------------------------------\n");
+        };
+        printf("%p | %3d | %8ld | %s\n", (void*)&nodes[i], nodes[i].id, nodes[i].size, nodes[i].path);
     }
-    free(nodes);
 
+    // print memory usage
     printf("---\n");
     printf("Node struct: %zu\n", sizeof(Node));
     printf("Node array: %zu\n", items * sizeof(Node));
     printf("---\n");
+
+    // Free allocated memory
+    for (int i = 0; i < items; i++) {
+        free(nodes[i].path);
+        free(nodes[i].content);
+    }
+    free(nodes);
 
     return 0;
 }
