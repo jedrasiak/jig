@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <string.h>
+#include <regex.h>
 
 /*
 gcc -Wall -Wextra -Werror src/jig-tree.c -o bin/jig-tree
@@ -11,6 +12,7 @@ find datasets/simple -type f -name "*.md" | valgrind --leak-check=full --show-le
 
 int main() {
     char filepath[PATH_MAX];
+    char *pattern = "\\[.*\\]\\((.*)\\?label=parent\\)";
 
     // data structure for tree node
     typedef struct {
@@ -24,7 +26,6 @@ int main() {
     int nodes_count = 0;
 
     // data structure for edge
-    /*
     typedef struct {
         uint src;
         uint dst;
@@ -33,7 +34,18 @@ int main() {
 
     Edge *edges = NULL;
     int edges_count = 0;
-    */
+
+    // data for regex
+    regex_t regex;
+    regmatch_t matches[2];
+    int result;
+
+    // compile the regex pattern
+    result = regcomp(&regex, pattern, REG_EXTENDED | REG_ICASE);
+    if (result != 0) {
+        fprintf(stderr, "Could not compile regex\n");
+        return 1;
+    }
 
     // build collection of nodes
     while (fgets(filepath, sizeof(filepath), stdin) != NULL) {
@@ -100,19 +112,67 @@ int main() {
         }
     }
 
+    // build collection of edges
+    for (int i = 0; i < nodes_count; i++) {
+        // execute the regex against the node content
+        //printf("Testing node %d\n", nodes[i].id);
+        result = regexec(&regex, nodes[i].content, 2, matches, 0);
+
+        if (result == 0) {
+            //printf("✓ Match found\n");
+            //printf("%d\n", matches[1].rm_so);
+            
+            // grow array of edges
+            Edge *tmp = realloc(edges, (edges_count + 1) * sizeof(Edge));
+            if (tmp == NULL) {
+                free(edges);
+                fprintf(stderr, "Realloc failed\n");
+                exit(EXIT_FAILURE);
+            }
+            edges = tmp;
+
+            // attach data to edge
+            edges[edges_count].src = nodes[i].id;
+            edges[edges_count].dst = 0; // placeholder
+            edges[edges_count].label = NULL; // placeholder
+
+            edges_count++;
+        } else if (result == REG_NOMATCH) {
+            //printf("✗ No match\n");
+        } else {
+            char error_message[100];
+            regerror(result, &regex, error_message, sizeof(error_message));
+            fprintf(stderr, "Regex match failed: %s\n", error_message);
+            return 1;
+        }
+    }
+
     // print nodes
     for (int i = 0; i < nodes_count; i++) {
         if (i == 0) {
-            printf("       address |  id |     size | path\n");
+            printf("  node address |  id |     size | path\n");
             printf("---------------+-----+----------+------------------------------\n");
         };
         printf("%p | %3d | %8ld | %s\n", (void*)&nodes[i], nodes[i].id, nodes[i].size, nodes[i].path);
     }
+    printf("\n");
+
+    // print edges
+    for (int i = 0; i < edges_count; i++) {
+        if (i == 0) {
+            printf("  edge address | src | dst | label\n");
+            printf("---------------+-----+-----+-------\n");
+        };
+        printf("%p | %3d | %3d | %s\n", (void*)&edges[i], edges[i].src, edges[i].dst, edges[i].label);
+    }
+    printf("\n");
 
     // print memory usage
     printf("---\n");
     printf("Node struct: %zu\n", sizeof(Node));
     printf("Node array: %zu\n", nodes_count * sizeof(Node));
+    printf("Edge struct: %zu\n", sizeof(Edge));
+    printf("Edge array: %zu\n", edges_count * sizeof(Edge));
     printf("---\n");
 
     // Free allocated memory
