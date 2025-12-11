@@ -52,6 +52,14 @@ int main() {
         // Remove trailing newline if present
         filepath[strcspn(filepath, "\n")] = '\0';
 
+        // Skip "./" prefix if present
+        char *path_to_store = filepath;
+        /* TO REMOVE LATER
+        if (strncmp(filepath, ".", 1) == 0) {
+            path_to_store = filepath + 1;
+        }
+        */
+
         // Grow array of nodes
         Node *tmp = realloc(nodes, (nodes_count + 1) * sizeof(Node));
         if (tmp == NULL) {
@@ -62,7 +70,7 @@ int main() {
         nodes = tmp;
 
         // Allocate array for path
-        nodes[nodes_count].path = malloc(strlen(filepath) + 1);
+        nodes[nodes_count].path = malloc(strlen(path_to_store) + 1);
         if (nodes[nodes_count].path == NULL) {
             for (int i = 0; i < nodes_count; i++) {
                 free(nodes[i].path);
@@ -74,7 +82,7 @@ int main() {
 
         // Attach data to node
         nodes[nodes_count].id = nodes_count;
-        strcpy(nodes[nodes_count].path, filepath);
+        strcpy(nodes[nodes_count].path, path_to_store);
 
         nodes_count++;
     }
@@ -84,7 +92,7 @@ int main() {
         // open file
         FILE *fptr;
         if ((fptr = fopen(nodes[i].path, "r")) == NULL) {
-            fprintf(stderr, "File open failed");
+            fprintf(stderr, "File open failed: %s\n", nodes[i].path);
             exit(EXIT_FAILURE);
         }
         
