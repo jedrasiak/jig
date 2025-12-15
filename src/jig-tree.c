@@ -12,11 +12,10 @@ find datasets/simple -type f -name "*.md" | valgrind --leak-check=full --show-le
 
 int main() {
     char filepath[PATH_MAX];
-    char *pattern = "\\[.*\\]\\((.*)\\?label=parent\\)";
 
     // data structure for tree node
     typedef struct {
-        uint id;
+        char id[37];
         char *path;
         long size;
         char *content;
@@ -27,8 +26,8 @@ int main() {
 
     // data structure for edge
     typedef struct {
-        uint src;
-        uint dst;
+        char src[37];
+        char dst[37];
         char *label;
     } Edge;
 
@@ -36,14 +35,24 @@ int main() {
     int edges_count = 0;
 
     // data for regex
-    regex_t regex;
-    regmatch_t matches[2];
+    char *rgx_link_pattern = "\\[.*\\]\\((.*)\\?label=parent\\)";
+    char *rgx_id_pattern = "id: (.*)";
+    regex_t rgx_link;
+    regex_t rgx_id;
+    regmatch_t rgx_link_matches[2];
+    regmatch_t rgx_id_matches[2];
     int result;
 
-    // compile the regex pattern
-    result = regcomp(&regex, pattern, REG_EXTENDED | REG_ICASE);
+    // compile the regex patterns
+    result = regcomp(&rgx_link, rgx_link_pattern, REG_EXTENDED | REG_ICASE);
     if (result != 0) {
-        fprintf(stderr, "Could not compile regex\n");
+        fprintf(stderr, "Could not compile regex: rgx_link_pattern\n");
+        return 1;
+    }
+
+    result = regcomp(&rgx_id, rgx_id_pattern, REG_EXTENDED | REG_ICASE);
+    if (result != 0) {
+        fprintf(stderr, "Cold not compile regex: rgx_id_pattern\n");
         return 1;
     }
 
@@ -51,14 +60,6 @@ int main() {
     while (fgets(filepath, sizeof(filepath), stdin) != NULL) {
         // Remove trailing newline if present
         filepath[strcspn(filepath, "\n")] = '\0';
-
-        // Skip "./" prefix if present
-        char *path_to_store = filepath;
-        /* TO REMOVE LATER
-        if (strncmp(filepath, ".", 1) == 0) {
-            path_to_store = filepath + 1;
-        }
-        */
 
         // Grow array of nodes
         Node *tmp = realloc(nodes, (nodes_count + 1) * sizeof(Node));
@@ -70,7 +71,7 @@ int main() {
         nodes = tmp;
 
         // Allocate array for path
-        nodes[nodes_count].path = malloc(strlen(path_to_store) + 1);
+        nodes[nodes_count].path = malloc(strlen(filepath) + 1);
         if (nodes[nodes_count].path == NULL) {
             for (int i = 0; i < nodes_count; i++) {
                 free(nodes[i].path);
@@ -81,8 +82,7 @@ int main() {
         }
 
         // Attach data to node
-        nodes[nodes_count].id = nodes_count;
-        strcpy(nodes[nodes_count].path, path_to_store);
+        strcpy(nodes[nodes_count].path, filepath);
 
         nodes_count++;
     }
@@ -113,6 +113,27 @@ int main() {
         }
         nodes[i].content[nodes[i].size] = '\0';
 
+        // read file id
+        result = regexec(&rgx_id, nodes[i].content, 2, rgx_id_matches, 0);
+        if (result == 0) {
+            // extract matched UUID
+            int match_start = rgx_id_matches[1].rm_so;
+            int match_end = rgx_id_matches[1].rm_eo;
+            int match_length = match_end - match_start;
+
+            // ensure UUID fits in the buffer (36 chars + null terminator)
+            if (match_length > 36) {
+                match_length = 36;
+            }
+
+            // copy UUID to node
+            strncpy(nodes[i].id, nodes[i].content + match_start, match_length);
+            nodes[i].id[match_length] = '\0';
+        } else {
+            // no ID found, set empty UUID
+            nodes[i].id[0] = '\0';
+        }
+
         // close file
         if (fclose(fptr) != 0) {
             fprintf(stderr, "File close failed");
@@ -124,7 +145,7 @@ int main() {
     for (int i = 0; i < nodes_count; i++) {
         // execute the regex against the node content
         //printf("Testing node %d\n", nodes[i].id);
-        result = regexec(&regex, nodes[i].content, 2, matches, 0);
+        result = regexec(&rgx_link, nodes[i].content, 2, rgx_link_matches, 0);
 
         if (result == 0) {
             //printf("✓ Match found\n");
@@ -140,8 +161,10 @@ int main() {
             edges = tmp;
 
             // attach data to edge
-            edges[edges_count].src = nodes[i].id;
-            edges[edges_count].dst = 0; // placeholder
+            strncpy(edges[edges_count].src, nodes[i].id, 36);
+            edges[edges_count].src[36] = '\0';
+            strncpy(edges[edges_count].dst, "none", 36);
+            edges[edges_count].dst[36] = '\0';
             edges[edges_count].label = NULL; // placeholder
 
             edges_count++;
@@ -149,7 +172,7 @@ int main() {
             //printf("✗ No match\n");
         } else {
             char error_message[100];
-            regerror(result, &regex, error_message, sizeof(error_message));
+            regerror(result, &rgx_link, error_message, sizeof(error_message));
             fprintf(stderr, "Regex match failed: %s\n", error_message);
             return 1;
         }
@@ -158,20 +181,20 @@ int main() {
     // print nodes
     for (int i = 0; i < nodes_count; i++) {
         if (i == 0) {
-            printf("  node address |  id |     size | path\n");
-            printf("---------------+-----+----------+------------------------------\n");
+            printf("                                uuid | path \n");
+            printf("-------------------------------------+------\n");
         };
-        printf("%p | %3d | %8ld | %s\n", (void*)&nodes[i], nodes[i].id, nodes[i].size, nodes[i].path);
+        printf("%s | %s\n", nodes[i].id, nodes[i].path);
     }
     printf("\n");
 
     // print edges
     for (int i = 0; i < edges_count; i++) {
         if (i == 0) {
-            printf("  edge address | src | dst | label\n");
-            printf("---------------+-----+-----+-------\n");
+            printf("                                 src | dst | label\n");
+            printf("-------------------------------------+-----+------\n");
         };
-        printf("%p | %3d | %3d | %s\n", (void*)&edges[i], edges[i].src, edges[i].dst, edges[i].label);
+        printf("%s | %s | %s\n", edges[i].src, edges[i].dst, edges[i].label);
     }
     printf("\n");
 
