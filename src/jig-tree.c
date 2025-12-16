@@ -17,8 +17,9 @@ int main() {
     typedef struct {
         char id[37];
         char *path;
-        long size;
-        char *content;
+        char *link;
+        //long size;
+        //char *content;
     } Node;
 
     Node *nodes = NULL;
@@ -41,25 +42,60 @@ int main() {
     regex_t rgx_id;
     regmatch_t rgx_link_matches[2];
     regmatch_t rgx_id_matches[2];
-    int result;
+    int rgx_result;
 
     // compile the regex patterns
-    result = regcomp(&rgx_link, rgx_link_pattern, REG_EXTENDED | REG_ICASE);
-    if (result != 0) {
+    rgx_result = regcomp(&rgx_link, rgx_link_pattern, REG_EXTENDED | REG_ICASE);
+    if (rgx_result != 0) {
         fprintf(stderr, "Could not compile regex: rgx_link_pattern\n");
         return 1;
     }
 
-    result = regcomp(&rgx_id, rgx_id_pattern, REG_EXTENDED | REG_ICASE);
-    if (result != 0) {
+    rgx_result = regcomp(&rgx_id, rgx_id_pattern, REG_EXTENDED | REG_ICASE);
+    if (rgx_result != 0) {
         fprintf(stderr, "Cold not compile regex: rgx_id_pattern\n");
         return 1;
     }
 
     // build collection of nodes
     while (fgets(filepath, sizeof(filepath), stdin) != NULL) {
+        long filesize;
+        char *filecontent;
+        
         // Remove trailing newline if present
         filepath[strcspn(filepath, "\n")] = '\0';
+
+        // open file
+        FILE *fptr;
+        if ((fptr = fopen(filepath, "r")) == NULL) {
+            fprintf(stderr, "File open failed: %s\n", filepath);
+            exit(EXIT_FAILURE);
+        }
+        
+        // read file length
+        fseek(fptr, 0L, SEEK_END);
+        filesize = ftell(fptr);
+        fseek(fptr, 0L, SEEK_SET);
+
+        // read file content
+        filecontent = malloc(filesize + 1);
+        if (filecontent == NULL) {
+            fprintf(stderr, "Malloc failed\n");
+            exit(EXIT_FAILURE);
+        }
+
+        for (int j = 0; j < filesize; j++) {
+            filecontent[j] = fgetc(fptr);
+        }
+        filecontent[filesize] = '\0';
+
+        // read file id
+        rgx_result = regexec(&rgx_id, filecontent, 2, rgx_id_matches, 0);
+
+        // skip if no id
+        if (rgx_result != 0) {
+            continue;
+        }
 
         // Grow array of nodes
         Node *tmp = realloc(nodes, (nodes_count + 1) * sizeof(Node));
@@ -69,6 +105,20 @@ int main() {
             exit(EXIT_FAILURE);
         }
         nodes = tmp;
+
+        // extract matched UUID
+        int match_start = rgx_id_matches[1].rm_so;
+        int match_end = rgx_id_matches[1].rm_eo;
+        int match_length = match_end - match_start;
+
+        // ensure UUID fits in the buffer (36 chars + null terminator)
+        if (match_length > 36) {
+            match_length = 36;
+        }
+
+        // copy UUID to node
+        strncpy(nodes[nodes_count].id, filecontent + match_start, match_length);
+        nodes[nodes_count].id[match_length] = '\0';
 
         // Allocate array for path
         nodes[nodes_count].path = malloc(strlen(filepath) + 1);
@@ -84,63 +134,18 @@ int main() {
         // Attach data to node
         strcpy(nodes[nodes_count].path, filepath);
 
-        nodes_count++;
-    }
-
-    // fetch nodes content
-    for (int i = 0; i < nodes_count; i++) {
-        // open file
-        FILE *fptr;
-        if ((fptr = fopen(nodes[i].path, "r")) == NULL) {
-            fprintf(stderr, "File open failed: %s\n", nodes[i].path);
-            exit(EXIT_FAILURE);
-        }
-        
-        // read file length
-        fseek(fptr, 0L, SEEK_END);
-        nodes[i].size = ftell(fptr);
-        fseek(fptr, 0L, SEEK_SET);
-
-        // read file content
-        nodes[i].content = malloc(nodes[i].size + 1);
-        if (nodes[i].content == NULL) {
-            fprintf(stderr, "Malloc failed\n");
-            exit(EXIT_FAILURE);
-        }
-
-        for (int j = 0; j < nodes[i].size; j++) {
-            nodes[i].content[j] = fgetc(fptr);
-        }
-        nodes[i].content[nodes[i].size] = '\0';
-
-        // read file id
-        result = regexec(&rgx_id, nodes[i].content, 2, rgx_id_matches, 0);
-        if (result == 0) {
-            // extract matched UUID
-            int match_start = rgx_id_matches[1].rm_so;
-            int match_end = rgx_id_matches[1].rm_eo;
-            int match_length = match_end - match_start;
-
-            // ensure UUID fits in the buffer (36 chars + null terminator)
-            if (match_length > 36) {
-                match_length = 36;
-            }
-
-            // copy UUID to node
-            strncpy(nodes[i].id, nodes[i].content + match_start, match_length);
-            nodes[i].id[match_length] = '\0';
-        } else {
-            // no ID found, set empty UUID
-            nodes[i].id[0] = '\0';
-        }
-
         // close file
         if (fclose(fptr) != 0) {
             fprintf(stderr, "File close failed");
             exit(EXIT_FAILURE);
         }
+
+        // increment nodes count
+        nodes_count++;
     }
 
+
+    /*
     // build collection of edges
     for (int i = 0; i < nodes_count; i++) {
         // execute the regex against the node content
@@ -177,6 +182,7 @@ int main() {
             return 1;
         }
     }
+    */
 
     // print nodes
     for (int i = 0; i < nodes_count; i++) {
@@ -188,6 +194,7 @@ int main() {
     }
     printf("\n");
 
+    /*
     // print edges
     for (int i = 0; i < edges_count; i++) {
         if (i == 0) {
@@ -197,19 +204,19 @@ int main() {
         printf("%s | %s | %s\n", edges[i].src, edges[i].dst, edges[i].label);
     }
     printf("\n");
+    */
 
     // print memory usage
     printf("---\n");
     printf("Node struct: %zu\n", sizeof(Node));
     printf("Node array: %zu\n", nodes_count * sizeof(Node));
-    printf("Edge struct: %zu\n", sizeof(Edge));
-    printf("Edge array: %zu\n", edges_count * sizeof(Edge));
+    //printf("Edge struct: %zu\n", sizeof(Edge));
+    //printf("Edge array: %zu\n", edges_count * sizeof(Edge));
     printf("---\n");
 
     // Free allocated memory
     for (int i = 0; i < nodes_count; i++) {
         free(nodes[i].path);
-        free(nodes[i].content);
     }
     free(nodes);
 
