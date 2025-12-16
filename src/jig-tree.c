@@ -18,8 +18,6 @@ int main() {
         char id[37];
         char *path;
         char *link;
-        //long size;
-        //char *content;
     } Node;
 
     Node *nodes = NULL;
@@ -93,7 +91,8 @@ int main() {
         rgx_result = regexec(&rgx_id, filecontent, 2, rgx_id_matches, 0);
 
         // skip if no id
-        if (rgx_result != 0) {
+        if (rgx_result == REG_NOMATCH) {
+            free(filecontent);
             continue;
         }
 
@@ -106,32 +105,61 @@ int main() {
         }
         nodes = tmp;
 
-        // extract matched UUID
+        // extract matched id
         int match_start = rgx_id_matches[1].rm_so;
         int match_end = rgx_id_matches[1].rm_eo;
         int match_length = match_end - match_start;
 
-        // ensure UUID fits in the buffer (36 chars + null terminator)
+        // ensure id fits in the buffer (36 chars + null terminator)
         if (match_length > 36) {
             match_length = 36;
         }
 
-        // copy UUID to node
+        // attach id to node
         strncpy(nodes[nodes_count].id, filecontent + match_start, match_length);
         nodes[nodes_count].id[match_length] = '\0';
+
+        // read link in file
+        rgx_result = regexec(&rgx_link, filecontent, 2, rgx_link_matches, 0);
+
+        if (rgx_result == 0) {
+            // extract matched id
+            int match_start = rgx_link_matches[1].rm_so;
+            int match_end = rgx_link_matches[1].rm_eo;
+            int match_length = match_end - match_start;
+
+            // allocate array for link
+            nodes[nodes_count].link = malloc(match_length + 1);
+            if (nodes[nodes_count].link == NULL) {
+                for (int i = 0; i < nodes_count; i++) {
+                    free(nodes[i].path);
+                    free(nodes[i].link);
+                }
+                free(nodes);
+                fprintf(stderr, "Malloc failed\n");
+                exit(EXIT_FAILURE);
+            }
+
+            // attach link to node
+            strncpy(nodes[nodes_count].link, filecontent + match_start, match_length);
+            nodes[nodes_count].link[match_length] = '\0';
+        } else {
+            nodes[nodes_count].link = NULL;
+        }
 
         // Allocate array for path
         nodes[nodes_count].path = malloc(strlen(filepath) + 1);
         if (nodes[nodes_count].path == NULL) {
             for (int i = 0; i < nodes_count; i++) {
                 free(nodes[i].path);
+                free(nodes[i].link);
             }
             free(nodes);
             fprintf(stderr, "Malloc failed\n");
             exit(EXIT_FAILURE);
         }
 
-        // Attach data to node
+        // Attach path to node
         strcpy(nodes[nodes_count].path, filepath);
 
         // close file
@@ -139,6 +167,9 @@ int main() {
             fprintf(stderr, "File close failed");
             exit(EXIT_FAILURE);
         }
+
+        // free file content
+        free(filecontent);
 
         // increment nodes count
         nodes_count++;
@@ -185,12 +216,12 @@ int main() {
     */
 
     // print nodes
+    printf("*** nodes ***\n\n");
     for (int i = 0; i < nodes_count; i++) {
-        if (i == 0) {
-            printf("                                uuid | path \n");
-            printf("-------------------------------------+------\n");
-        };
-        printf("%s | %s\n", nodes[i].id, nodes[i].path);
+        printf("id: %s\n", nodes[i].id);
+        printf("path: %s\n", nodes[i].path);
+        printf("link: %s\n", nodes[i].link);
+        printf("---\n");
     }
     printf("\n");
 
@@ -207,18 +238,22 @@ int main() {
     */
 
     // print memory usage
-    printf("---\n");
+    printf("*** memory ***\n\n");
     printf("Node struct: %zu\n", sizeof(Node));
     printf("Node array: %zu\n", nodes_count * sizeof(Node));
     //printf("Edge struct: %zu\n", sizeof(Edge));
     //printf("Edge array: %zu\n", edges_count * sizeof(Edge));
-    printf("---\n");
 
     // Free allocated memory
     for (int i = 0; i < nodes_count; i++) {
         free(nodes[i].path);
+        free(nodes[i].link);
     }
     free(nodes);
+
+    // Free compiled regex patterns
+    regfree(&rgx_link);
+    regfree(&rgx_id);
 
     return 0;
 }
