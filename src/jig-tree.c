@@ -18,6 +18,7 @@ int main() {
         char id[37];
         char *path;
         char *link;
+        char *title;
     } Node;
 
     Node *nodes = NULL;
@@ -36,22 +37,43 @@ int main() {
     // data for regex
     char *rgx_link_pattern = "\\[.*\\]\\((.*)\\?label=parent\\)";
     char *rgx_id_pattern = "id: (.*)";
+    char *rgx_title_pattern = "title: (.*)";
     regex_t rgx_link;
     regex_t rgx_id;
+    regex_t rgx_title;
     regmatch_t rgx_link_matches[2];
     regmatch_t rgx_id_matches[2];
+    regmatch_t rgx_title_matches[2];
     int rgx_result;
 
     // compile the regex patterns
-    rgx_result = regcomp(&rgx_link, rgx_link_pattern, REG_EXTENDED | REG_ICASE);
+    rgx_result = regcomp(
+        &rgx_link, 
+        rgx_link_pattern, 
+        REG_EXTENDED | REG_ICASE | REG_NEWLINE
+    );
     if (rgx_result != 0) {
         fprintf(stderr, "Could not compile regex: rgx_link_pattern\n");
         return 1;
     }
 
-    rgx_result = regcomp(&rgx_id, rgx_id_pattern, REG_EXTENDED | REG_ICASE);
+    rgx_result = regcomp(
+        &rgx_id, 
+        rgx_id_pattern, 
+        REG_EXTENDED | REG_ICASE | REG_NEWLINE
+    );
     if (rgx_result != 0) {
         fprintf(stderr, "Cold not compile regex: rgx_id_pattern\n");
+        return 1;
+    }
+
+    rgx_result = regcomp(
+        &rgx_title, 
+        rgx_title_pattern, 
+        REG_EXTENDED | REG_ICASE | REG_NEWLINE
+    );
+    if (rgx_result != 0) {
+        fprintf(stderr, "Cold not compile regex: rgx_title_pattern\n");
         return 1;
     }
 
@@ -134,6 +156,7 @@ int main() {
                 for (int i = 0; i < nodes_count; i++) {
                     free(nodes[i].path);
                     free(nodes[i].link);
+                    free(nodes[i].title);
                 }
                 free(nodes);
                 fprintf(stderr, "Malloc failed\n");
@@ -147,12 +170,42 @@ int main() {
             nodes[nodes_count].link = NULL;
         }
 
+        // read title in file
+        rgx_result = regexec(&rgx_title, filecontent, 2, rgx_title_matches, 0);
+
+        if (rgx_result == 0) {
+            // extract matched title
+            int match_start = rgx_title_matches[1].rm_so;
+            int match_end = rgx_title_matches[1].rm_eo;
+            int match_length = match_end - match_start;
+
+            // allocate array for title
+            nodes[nodes_count].title = malloc(match_length + 1);
+            if (nodes[nodes_count].title == NULL) {
+                for (int i = 0; i < nodes_count; i++) {
+                    free(nodes[i].path);
+                    free(nodes[i].link);
+                    free(nodes[i].title);
+                }
+                free(nodes);
+                fprintf(stderr, "Malloc failed\n");
+                exit(EXIT_FAILURE);
+            }
+
+            // attach title to node
+            strncpy(nodes[nodes_count].title, filecontent + match_start, match_length);
+            nodes[nodes_count].title[match_length] = '\0';
+        } else {
+            nodes[nodes_count].title = NULL;
+        }
+
         // Allocate array for path
         nodes[nodes_count].path = malloc(strlen(filepath) + 1);
         if (nodes[nodes_count].path == NULL) {
             for (int i = 0; i < nodes_count; i++) {
                 free(nodes[i].path);
                 free(nodes[i].link);
+                free(nodes[i].title);
             }
             free(nodes);
             fprintf(stderr, "Malloc failed\n");
@@ -221,7 +274,8 @@ int main() {
         printf("id: %s\n", nodes[i].id);
         printf("path: %s\n", nodes[i].path);
         printf("link: %s\n", nodes[i].link);
-        printf("---\n");
+        printf("title: %s\n", nodes[i].title);
+        printf("***\n");
     }
     printf("\n");
 
@@ -248,12 +302,14 @@ int main() {
     for (int i = 0; i < nodes_count; i++) {
         free(nodes[i].path);
         free(nodes[i].link);
+        free(nodes[i].title);
     }
     free(nodes);
 
     // Free compiled regex patterns
     regfree(&rgx_link);
     regfree(&rgx_id);
+    regfree(&rgx_title);
 
     return 0;
 }
