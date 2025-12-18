@@ -10,29 +10,30 @@ find datasets/simple -type f -name "*.md" | jig-tree
 find datasets/simple -type f -name "*.md" | valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes bin/jig-tree
 */
 
+// data structure for tree node
+typedef struct {
+    char id[37];
+    char *path;
+    char *link;
+    char *title;
+} Node;
+
+// data structure for edge
+typedef struct {
+    char src[37];
+    char dst[37];
+    char *label;
+} Edge;
+
+Node *nodes = NULL;
+int nodes_count = 0;
+
+// function declaration
+int print_children(Node *node, int depth, char *prefix, int is_last);
+
 int main() {
     char filepath[PATH_MAX];
 
-    // data structure for tree node
-    typedef struct {
-        char id[37];
-        char *path;
-        char *link;
-        char *title;
-    } Node;
-
-    Node *nodes = NULL;
-    int nodes_count = 0;
-
-    // data structure for edge
-    typedef struct {
-        char src[37];
-        char dst[37];
-        char *label;
-    } Edge;
-
-    Edge *edges = NULL;
-    int edges_count = 0;
 
     // data for regex
     char *rgx_link_pattern = "\\[.*\\]\\((.*)\\?label=parent\\)";
@@ -229,9 +230,12 @@ int main() {
     }
 
 
-    /*
     // build collection of edges
     for (int i = 0; i < nodes_count; i++) {
+        if (nodes[i].link == NULL) {
+            print_children(&nodes[i], 0, "", 0);
+        }
+    /*
         // execute the regex against the node content
         //printf("Testing node %d\n", nodes[i].id);
         result = regexec(&rgx_link, nodes[i].content, 2, rgx_link_matches, 0);
@@ -265,9 +269,10 @@ int main() {
             fprintf(stderr, "Regex match failed: %s\n", error_message);
             return 1;
         }
-    }
     */
+    }
 
+    /*
     // print nodes
     printf("*** nodes ***\n\n");
     for (int i = 0; i < nodes_count; i++) {
@@ -278,6 +283,7 @@ int main() {
         printf("***\n");
     }
     printf("\n");
+    */
 
     /*
     // print edges
@@ -310,6 +316,54 @@ int main() {
     regfree(&rgx_link);
     regfree(&rgx_id);
     regfree(&rgx_title);
+
+    return 0;
+}
+
+int print_children(Node *node, int depth, char *prefix, int is_last) {
+    // Print current node with appropriate connector
+    if (depth == 0) {
+        // Root node - no prefix or connector
+        printf("%s\n", node->title);
+    } else {
+        // Child node - print: prefix + connector + title
+        printf("%s%s%s\n",
+               prefix,
+               is_last ? "└── " : "├── ",
+               node->title);
+    }
+
+    // Count children first to detect last child
+    int children_count = 0;
+    int children_indices[nodes_count]; // Store indices of children
+
+    for (int i = 0; i < nodes_count; i++) {
+        if (nodes[i].link != NULL && strstr(node->path, nodes[i].link) != NULL) {
+            children_indices[children_count] = i;
+            children_count++;
+        }
+    }
+
+    // Recursively print each child
+    for (int i = 0; i < children_count; i++) {
+        int child_idx = children_indices[i];
+        int is_child_last = (i == children_count - 1);
+
+        // Build new prefix for child's descendants
+        char new_prefix[1024];
+        if (depth == 0) {
+            // Root node: children get empty prefix (no indentation yet)
+            new_prefix[0] = '\0';
+        } else {
+            // Non-root: add vertical bar or spaces based on whether current node is last
+            snprintf(new_prefix, sizeof(new_prefix), "%s%s",
+                     prefix,
+                     is_last ? "    " : "│   ");
+        }
+
+        // Recursively print this child
+        print_children(&nodes[child_idx], depth + 1, new_prefix, is_child_last);
+    }
 
     return 0;
 }
