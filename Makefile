@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Wextra -I./include -I./vendor/cjson
+CFLAGS = -Wall -Wextra -I./src -I./vendor/cjson
 LDFLAGS =
 
 # Directories
@@ -16,7 +16,7 @@ TARGET_SEARCH = $(BIN_DIR)/jig-search-re
 TARGET_TREE = $(BIN_DIR)/jig-tree
 
 # Source files
-JIG_SOURCES = $(SRC_DIR)/main.c
+JIG_SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/fn/fn.c
 SEARCH_SOURCES = $(SRC_DIR)/jig-search-re.c
 TREE_SOURCES = $(SRC_DIR)/jig-tree.c
 LIB_SOURCES = $(wildcard $(LIB_DIR)/*.c)
@@ -47,6 +47,7 @@ $(TARGET_TREE): $(TREE_OBJECTS) | $(BIN_DIR)
 
 # Compile .c files to .o files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -c $< -o $@
 	@echo "CC $<"
 
