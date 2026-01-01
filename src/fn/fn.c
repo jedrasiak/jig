@@ -1,18 +1,120 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <regex.h>
 #include "fn.h"
 
 #define MAX_PATH_LENGTH 4096
 
+/**
+ * Check if file meets filtering criteria:
+ * - Has YAML frontmatter (starts with ---)
+ * - Has id property (max 36 bytes)
+ * - Has title property
+ * Returns 1 if valid, 0 otherwise
+ */
+static int validate_file(const char *filepath) {
+    FILE *fptr;
+    long filesize;
+    char *filecontent;
+    int is_valid = 0;
+    regex_t rgx_id, rgx_title;
+    int rgx_result;
+
+    // Open file
+    if ((fptr = fopen(filepath, "r")) == NULL) {
+        return 0;
+    }
+
+    // Get file size
+    fseek(fptr, 0L, SEEK_END);
+    filesize = ftell(fptr);
+    fseek(fptr, 0L, SEEK_SET);
+
+    // Read file content
+    filecontent = malloc(filesize + 1);
+    if (filecontent == NULL) {
+        fclose(fptr);
+        return 0;
+    }
+
+    for (long j = 0; j < filesize; j++) {
+        filecontent[j] = fgetc(fptr);
+    }
+    filecontent[filesize] = '\0';
+
+    fclose(fptr);
+
+    // Check for YAML frontmatter (must start with ---)
+    if (strncmp(filecontent, "---", 3) != 0) {
+        free(filecontent);
+        return 0;
+    }
+
+    // Compile regex patterns
+    if (regcomp(&rgx_id, "id: (.*)", REG_EXTENDED | REG_ICASE | REG_NEWLINE) != 0) {
+        free(filecontent);
+        return 0;
+    }
+
+    if (regcomp(&rgx_title, "title: (.*)", REG_EXTENDED | REG_ICASE | REG_NEWLINE) != 0) {
+        regfree(&rgx_id);
+        free(filecontent);
+        return 0;
+    }
+
+    // Check for id property
+    regmatch_t rgx_id_matches[2];
+    rgx_result = regexec(&rgx_id, filecontent, 2, rgx_id_matches, 0);
+
+    if (rgx_result == REG_NOMATCH) {
+        regfree(&rgx_id);
+        regfree(&rgx_title);
+        free(filecontent);
+        return 0;
+    }
+
+    // Validate id length (max 36 bytes)
+    int id_length = rgx_id_matches[1].rm_eo - rgx_id_matches[1].rm_so;
+    if (id_length > 36) {
+        regfree(&rgx_id);
+        regfree(&rgx_title);
+        free(filecontent);
+        return 0;
+    }
+
+    // Check for title property
+    regmatch_t rgx_title_matches[2];
+    rgx_result = regexec(&rgx_title, filecontent, 2, rgx_title_matches, 0);
+
+    if (rgx_result == REG_NOMATCH) {
+        regfree(&rgx_id);
+        regfree(&rgx_title);
+        free(filecontent);
+        return 0;
+    }
+
+    // All criteria met
+    is_valid = 1;
+
+    // Cleanup
+    regfree(&rgx_id);
+    regfree(&rgx_title);
+    free(filecontent);
+
+    return is_valid;
+}
+
 int fn(int argc, char **argv) {
-    printf(":jig:fn\n");
     char path[MAX_PATH_LENGTH];
 
     // Check if filepath provided as positional argument
     if (argc >= 2) {
         // Process single filepath from argv[1]
-        printf("%s\n", argv[1]);
+        if (validate_file(argv[1])) {
+            printf("%s\n", argv[1]);
+        }
         return 0;
     }
 
@@ -21,13 +123,12 @@ int fn(int argc, char **argv) {
         // Read filepaths from stdin, one per line
         while (fgets(path, sizeof(path), stdin) != NULL) {
             // Remove trailing newline
-            size_t len = strlen(path);
-            if (len > 0 && path[len - 1] == '\n') {
-                path[len - 1] = '\0';
-            }
+            path[strcspn(path, "\n")] = '\0';
 
-            // Output the path
-            printf("%s\n", path);
+            // Validate and output path
+            if (validate_file(path)) {
+                printf("%s\n", path);
+            }
         }
         return 0;
     }
