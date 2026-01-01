@@ -16,7 +16,7 @@ TARGET_SEARCH = $(BIN_DIR)/jig-search-re
 TARGET_TREE = $(BIN_DIR)/jig-tree
 
 # Source files
-JIG_SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/fn/fn.c
+JIG_SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/filter/filter.c
 SEARCH_SOURCES = $(SRC_DIR)/jig-search-re.c
 TREE_SOURCES = $(SRC_DIR)/jig-tree.c
 LIB_SOURCES = $(wildcard $(LIB_DIR)/*.c)

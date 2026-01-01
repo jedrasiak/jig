@@ -4,15 +4,15 @@
 #include <unistd.h>
 #include <regex.h>
 #include <limits.h>
-#include "fn.h"
+#include "filter.h"
 
 /**
  * Display help message following Unix conventions
  */
 static void help(void) {
-    printf("Usage: jig fn [OPTIONS] [FILE]\n");
-    printf("       jig-fn [OPTIONS] [FILE]\n");
-    printf("       <command> | jig fn\n");
+    printf("Usage: jig filter [OPTIONS] [FILE]\n");
+    printf("       jig-filter [OPTIONS] [FILE]\n");
+    printf("       <command> | jig filter\n");
     printf("\n");
     printf("Filter note files based on YAML frontmatter criteria.\n");
     printf("\n");
@@ -25,8 +25,8 @@ static void help(void) {
     printf("  -h, --help     Display this help and exit\n");
     printf("\n");
     printf("Examples:\n");
-    printf("  jig fn note.md              Validate single file\n");
-    printf("  find . -name \"*.md\" | jig fn  Filter multiple files\n");
+    printf("  jig filter note.md              Validate single file\n");
+    printf("  find . -name \"*.md\" | jig filter  Filter multiple files\n");
 }
 
 /**
@@ -128,7 +128,7 @@ static int validate_file(const char *filepath) {
     return is_valid;
 }
 
-int fn(int argc, char **argv) {
+int filter(int argc, char **argv) {
     char filepath[PATH_MAX];
 
     if (argc >= 2) {

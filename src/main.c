@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "fn/fn.h"
+#include "filter/filter.h"
 
 int main(int argc, char **argv) {
     printf(":jig\n");
@@ -10,8 +10,8 @@ int main(int argc, char **argv) {
     }
     printf("---\n");
 
-    if (strcmp(argv[1], "fn") == 0) {
-        return fn(argc - 1, argv + 1);
+    if (strcmp(argv[1], "filter") == 0) {
+        return filter(argc - 1, argv + 1);
     }
 
     return 0;

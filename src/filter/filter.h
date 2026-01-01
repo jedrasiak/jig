@@ -1,5 +1,5 @@
-#ifndef FN_H
-#define FN_H
+#ifndef FILTER_H
+#define FILTER_H
 
 /**
  * Filter function that processes filepaths
@@ -8,6 +8,6 @@
  * - stdin (piped input, one path per line)
  * Returns 0 on success, non-zero on error
  */
-int fn(int argc, char **argv);
+int filter(int argc, char **argv);
 
-#endif /* FN_H */
+#endif /* FILTER_H */

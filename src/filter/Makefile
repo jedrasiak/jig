@@ -3,16 +3,16 @@ CC = gcc
 CFLAGS = -Wall -Wextra -Werror -I.
 
 # Output binary
-TARGET = ../../bin/jig-fn
+TARGET = ../../bin/jig-filter
 
 # Source files
-SOURCES = fn.c fn-cli.c
+SOURCES = filter.c filter-cli.c
 
 # Default target
 all: $(TARGET)
 
 # Build the executable
-$(TARGET): $(SOURCES) fn.h
+$(TARGET): $(SOURCES) filter.h
 	$(CC) $(CFLAGS) $(SOURCES) -o $(TARGET)
 	@echo "Built $(TARGET)"
 
