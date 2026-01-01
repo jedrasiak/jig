@@ -5,6 +5,6 @@
  * Standalone executable for debugging the fn() function
  * Build with: make (from this directory)
  */
-int main(void) {
-    return fn();
+int main(int argc, char **argv) {
+    return fn(argc, argv);
 }
