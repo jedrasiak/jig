@@ -3,9 +3,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <regex.h>
+#include <limits.h>
 #include "fn.h"
-
-#define MAX_PATH_LENGTH 4096
 
 /**
  * Check if file meets filtering criteria:
@@ -14,6 +13,7 @@
  * - Has title property
  * Returns 1 if valid, 0 otherwise
  */
+
 static int validate_file(const char *filepath) {
     FILE *fptr;
     long filesize;
@@ -107,7 +107,7 @@ static int validate_file(const char *filepath) {
 }
 
 int fn(int argc, char **argv) {
-    char path[MAX_PATH_LENGTH];
+    char filepath[PATH_MAX];
 
     // Check if filepath provided as positional argument
     if (argc >= 2) {
@@ -121,13 +121,13 @@ int fn(int argc, char **argv) {
     // Check if stdin is a pipe (not a terminal)
     if (!isatty(fileno(stdin))) {
         // Read filepaths from stdin, one per line
-        while (fgets(path, sizeof(path), stdin) != NULL) {
+        while (fgets(filepath, sizeof(filepath), stdin) != NULL) {
             // Remove trailing newline
-            path[strcspn(path, "\n")] = '\0';
+            filepath[strcspn(filepath, "\n")] = '\0';
 
             // Validate and output path
-            if (validate_file(path)) {
-                printf("%s\n", path);
+            if (validate_file(filepath)) {
+                printf("%s\n", filepath);
             }
         }
         return 0;
