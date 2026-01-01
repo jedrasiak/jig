@@ -7,13 +7,35 @@
 #include "fn.h"
 
 /**
+ * Display help message following Unix conventions
+ */
+static void help(void) {
+    printf("Usage: jig fn [OPTIONS] [FILE]\n");
+    printf("       jig-fn [OPTIONS] [FILE]\n");
+    printf("       <command> | jig fn\n");
+    printf("\n");
+    printf("Filter note files based on YAML frontmatter criteria.\n");
+    printf("\n");
+    printf("Valid files must contain:\n");
+    printf("  - YAML frontmatter delimited by --- at the beginning\n");
+    printf("  - id property (maximum 36 bytes)\n");
+    printf("  - title property\n");
+    printf("\n");
+    printf("Options:\n");
+    printf("  -h, --help     Display this help and exit\n");
+    printf("\n");
+    printf("Examples:\n");
+    printf("  jig fn note.md              Validate single file\n");
+    printf("  find . -name \"*.md\" | jig fn  Filter multiple files\n");
+}
+
+/**
  * Check if file meets filtering criteria:
  * - Has YAML frontmatter (starts with ---)
  * - Has id property (max 36 bytes)
  * - Has title property
  * Returns 1 if valid, 0 otherwise
  */
-
 static int validate_file(const char *filepath) {
     FILE *fptr;
     long filesize;
@@ -109,8 +131,13 @@ static int validate_file(const char *filepath) {
 int fn(int argc, char **argv) {
     char filepath[PATH_MAX];
 
-    // Check if filepath provided as positional argument
     if (argc >= 2) {
+        // Check for help flag
+        if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+            help();
+            return 0;
+        }
+
         // Process single filepath from argv[1]
         if (validate_file(argv[1])) {
             printf("%s\n", argv[1]);
@@ -133,7 +160,7 @@ int fn(int argc, char **argv) {
         return 0;
     }
 
-    // No input provided
-    fprintf(stderr, "Error: No filepath provided. Use: jig fn <filepath> or pipe input.\n");
+    // No input provided - show help to stderr and exit with error
+    help();
     return 1;
 }
