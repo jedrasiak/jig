@@ -16,6 +16,11 @@ find . -type f \( -iname "*.md" -o -iname "*.txt" \)
 hyperfine "rg -l -i newag" "find . -type f \( -iname '*.md' -o -iname '*.txt' \) | jig-search-re 'newag'"
 ```
 
+### Memory error detection
+```bash
+valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes bin/<COMMAND>
+```
+
 ## Development
 
 ### Building from Source

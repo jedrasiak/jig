@@ -75,12 +75,12 @@ static int validate_file(const char *filepath) {
     }
 
     // Compile regex patterns
-    if (regcomp(&rgx_id, "id: (.*)", REG_EXTENDED | REG_ICASE | REG_NEWLINE) != 0) {
+    if (regcomp(&rgx_id, "id:[ \t]*([^ \t\r\n]+)", REG_EXTENDED | REG_ICASE | REG_NEWLINE) != 0) {
         free(filecontent);
         return 0;
     }
 
-    if (regcomp(&rgx_title, "title: (.*)", REG_EXTENDED | REG_ICASE | REG_NEWLINE) != 0) {
+    if (regcomp(&rgx_title, "title:[ \t]*([^ \t\r\n]+)", REG_EXTENDED | REG_ICASE | REG_NEWLINE) != 0) {
         regfree(&rgx_id);
         free(filecontent);
         return 0;
