@@ -16,10 +16,12 @@ static void help(void) {
     printf("Generate and display a tree structure of notes based on parent-child relationships.\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -h, --help     Display this help and exit\n");
+    printf("  -h, --help          Display this help and exit\n");
+    printf("  -f, --format FORMAT Output format (md for markdown)\n");
     printf("\n");
     printf("Examples:\n");
-    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree    Generate tree from markdown files\n");
+    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree       Generate tree from markdown files\n");
+    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree -f md  Output in markdown format\n");
 }
 
 /**
@@ -71,9 +73,6 @@ static NodeList* process_stdin(void) {
         // Remove trailing newline
         filepath[strcspn(filepath, "\n")] = '\0';
 
-        // Print with # prefix
-        printf("# %s\n", filepath);
-
         // Add to node list
         nodelist_add(list, filepath);
     }
@@ -84,10 +83,17 @@ static NodeList* process_stdin(void) {
 /**
  * Print all nodes in the list
  */
-static void print_nodes(NodeList *list) {
-    printf("\n*** Nodes in list: %d ***\n\n", list->count);
-    for (int i = 0; i < list->count; i++) {
-        printf("%d: %s\n", i, list->items[i].path);
+static void print_nodes(NodeList *list, const char *format) {
+    if (format != NULL && strcmp(format, "md") == 0) {
+        // Markdown format
+        for (int i = 0; i < list->count; i++) {
+            printf("[title](%s)\n", list->items[i].path);
+        }
+    } else {
+        // Default format
+        for (int i = 0; i < list->count; i++) {
+            printf("%d: %s\n", i, list->items[i].path);
+        }
     }
 }
 
@@ -107,11 +113,21 @@ static void nodelist_free(NodeList *list) {
 }
 
 int tree(int argc, char **argv) {
-    // Check for help flag
-    if (argc >= 2) {
-        if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+    char *format = NULL;
+
+    // Parse arguments
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             help();
             return 0;
+        } else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0) {
+            if (i + 1 < argc) {
+                format = argv[i + 1];
+                i++;  // Skip next arg since we consumed it
+            } else {
+                fprintf(stderr, "Error: -f/--format requires a value\n");
+                return 1;
+            }
         }
     }
 
@@ -119,7 +135,7 @@ int tree(int argc, char **argv) {
     NodeList *nodes = process_stdin();
 
     // Print the node list
-    print_nodes(nodes);
+    print_nodes(nodes, format);
 
     // Free memory
     nodelist_free(nodes);
