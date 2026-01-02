@@ -2,9 +2,140 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <regex.h>
 
 #include "tree.h"
 #include "node/node.h"
+
+// Global compiled regexes
+static regex_t rgx_link;
+static regex_t rgx_id;
+static regex_t rgx_title;
+static int regexes_compiled = 0;
+
+/**
+ * Compile regex patterns for parsing node fields
+ */
+static void compile_regexes(void) {
+    if (regexes_compiled) return;
+
+    char *rgx_link_pattern = "\\[.*\\]\\((.*)\\?label=parent\\)";
+    char *rgx_id_pattern = "id: (.*)";
+    char *rgx_title_pattern = "title: (.*)";
+    int rgx_result;
+
+    rgx_result = regcomp(&rgx_link, rgx_link_pattern, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
+    if (rgx_result != 0) {
+        fprintf(stderr, "Could not compile regex: rgx_link_pattern\n");
+        exit(EXIT_FAILURE);
+    }
+
+    rgx_result = regcomp(&rgx_id, rgx_id_pattern, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
+    if (rgx_result != 0) {
+        fprintf(stderr, "Could not compile regex: rgx_id_pattern\n");
+        exit(EXIT_FAILURE);
+    }
+
+    rgx_result = regcomp(&rgx_title, rgx_title_pattern, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
+    if (rgx_result != 0) {
+        fprintf(stderr, "Could not compile regex: rgx_title_pattern\n");
+        exit(EXIT_FAILURE);
+    }
+
+    regexes_compiled = 1;
+}
+
+/**
+ * Free compiled regex patterns
+ */
+static void free_regexes(void) {
+    if (!regexes_compiled) return;
+
+    regfree(&rgx_link);
+    regfree(&rgx_id);
+    regfree(&rgx_title);
+
+    regexes_compiled = 0;
+}
+
+/**
+ * Parse node fields (id, title, link) from file content
+ */
+static void parse_node_fields(Node *node, const char *filepath) {
+    // Initialize fields to NULL/empty
+    node->id[0] = '\0';
+    node->link = NULL;
+    node->title = NULL;
+
+    FILE *fptr = fopen(filepath, "r");
+    if (fptr == NULL) {
+        return;  // Skip file if can't open
+    }
+
+    // Read file size
+    fseek(fptr, 0L, SEEK_END);
+    long filesize = ftell(fptr);
+    fseek(fptr, 0L, SEEK_SET);
+
+    // Read file content
+    char *filecontent = malloc(filesize + 1);
+    if (filecontent == NULL) {
+        fclose(fptr);
+        return;
+    }
+
+    for (long j = 0; j < filesize; j++) {
+        filecontent[j] = fgetc(fptr);
+    }
+    filecontent[filesize] = '\0';
+    fclose(fptr);
+
+    // Parse ID
+    regmatch_t rgx_id_matches[2];
+    int rgx_result = regexec(&rgx_id, filecontent, 2, rgx_id_matches, 0);
+    if (rgx_result == 0) {
+        int match_start = rgx_id_matches[1].rm_so;
+        int match_end = rgx_id_matches[1].rm_eo;
+        int match_length = match_end - match_start;
+        if (match_length > 36) {
+            match_length = 36;
+        }
+        strncpy(node->id, filecontent + match_start, match_length);
+        node->id[match_length] = '\0';
+    }
+
+    // Parse link
+    regmatch_t rgx_link_matches[2];
+    rgx_result = regexec(&rgx_link, filecontent, 2, rgx_link_matches, 0);
+    if (rgx_result == 0) {
+        int match_start = rgx_link_matches[1].rm_so;
+        int match_end = rgx_link_matches[1].rm_eo;
+        int match_length = match_end - match_start;
+
+        node->link = malloc(match_length + 1);
+        if (node->link != NULL) {
+            strncpy(node->link, filecontent + match_start, match_length);
+            node->link[match_length] = '\0';
+        }
+    }
+
+    // Parse title
+    regmatch_t rgx_title_matches[2];
+    rgx_result = regexec(&rgx_title, filecontent, 2, rgx_title_matches, 0);
+    if (rgx_result == 0) {
+        int match_start = rgx_title_matches[1].rm_so;
+        int match_end = rgx_title_matches[1].rm_eo;
+        int match_length = match_end - match_start;
+
+        node->title = malloc(match_length + 1);
+        if (node->title != NULL) {
+            strncpy(node->title, filecontent + match_start, match_length);
+            node->title[match_length] = '\0';
+        }
+    }
+
+    free(filecontent);
+}
 
 /**
  * Display help message
@@ -48,10 +179,8 @@ static void nodelist_add(NodeList *list, const char *filepath) {
     }
     strcpy(node->path, filepath);
 
-    // Initialize other fields to NULL/empty
-    node->id[0] = '\0';
-    node->link = NULL;
-    node->title = NULL;
+    // Parse node fields from file
+    parse_node_fields(node, filepath);
 
     list->count++;
 }
@@ -88,7 +217,8 @@ static void print_nodes(NodeList *list, const char *format) {
     if (format != NULL && strcmp(format, "md") == 0) {
         // Markdown format
         for (int i = 0; i < list->count; i++) {
-            printf("[title](%s)\n", list->items[i].path);
+            const char *title = list->items[i].title ? list->items[i].title : "title";
+            printf("[%s](%s)\n", title, list->items[i].path);
         }
     } else if (format != NULL && strcmp(format, "csv") == 0) {
         // CSV format
@@ -142,6 +272,9 @@ int tree(int argc, char **argv) {
         }
     }
 
+    // Compile regex patterns
+    compile_regexes();
+
     // Process input from stdin and build node list
     NodeList *nodes = process_stdin();
 
@@ -150,6 +283,7 @@ int tree(int argc, char **argv) {
 
     // Free memory
     nodelist_free(nodes);
+    free_regexes();
 
     return 0;
 }
