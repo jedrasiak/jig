@@ -6,12 +6,32 @@
 
 #include "tree.h"
 #include "node/node.h"
+#include "edge/edge.h"
 
 // Global compiled regexes
 static regex_t rgx_link;
 static regex_t rgx_id;
 static regex_t rgx_title;
 static int regexes_compiled = 0;
+
+/**
+ * Display help message
+ */
+static void help(void) {
+    printf("Usage: jig tree [OPTIONS]\n");
+    printf("       jig-tree [OPTIONS]\n");
+    printf("\n");
+    printf("Generate and display a tree structure of notes based on parent-child relationships.\n");
+    printf("\n");
+    printf("Options:\n");
+    printf("  -h, --help          Display this help and exit\n");
+    printf("  -f, --format FORMAT Output format (md for markdown, csv for CSV)\n");
+    printf("\n");
+    printf("Examples:\n");
+    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree        Generate tree from markdown files\n");
+    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree -f md   Output in markdown format\n");
+    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree -f csv  Output in CSV format\n");
+}
 
 /**
  * Compile regex patterns for parsing node fields
@@ -61,7 +81,7 @@ static void free_regexes(void) {
 /**
  * Parse node fields (id, title, link) from file content
  */
-static void parse_node_fields(Node *node, const char *filepath) {
+static void parse_node(Node *node, const char *filepath) {
     // Initialize fields to NULL/empty
     node->id[0] = '\0';
     node->link = NULL;
@@ -138,28 +158,9 @@ static void parse_node_fields(Node *node, const char *filepath) {
 }
 
 /**
- * Display help message
- */
-static void help(void) {
-    printf("Usage: jig tree [OPTIONS]\n");
-    printf("       jig-tree [OPTIONS]\n");
-    printf("\n");
-    printf("Generate and display a tree structure of notes based on parent-child relationships.\n");
-    printf("\n");
-    printf("Options:\n");
-    printf("  -h, --help          Display this help and exit\n");
-    printf("  -f, --format FORMAT Output format (md for markdown, csv for CSV)\n");
-    printf("\n");
-    printf("Examples:\n");
-    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree        Generate tree from markdown files\n");
-    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree -f md   Output in markdown format\n");
-    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree -f csv  Output in CSV format\n");
-}
-
-/**
  * Add node to list (realloc for each item)
  */
-static void nodelist_add(NodeList *list, const char *filepath) {
+static void add_node(NodeList *list, const char *filepath) {
     // Grow array by one item
     Node *tmp = realloc(list->items, (list->count + 1) * sizeof(Node));
     if (tmp == NULL) {
@@ -180,7 +181,7 @@ static void nodelist_add(NodeList *list, const char *filepath) {
     strcpy(node->path, filepath);
 
     // Parse node fields from file
-    parse_node_fields(node, filepath);
+    parse_node(node, filepath);
 
     list->count++;
 }
@@ -188,7 +189,7 @@ static void nodelist_add(NodeList *list, const char *filepath) {
 /**
  * Read filepaths from stdin and build node list
  */
-static NodeList* process_stdin(void) {
+static NodeList* build_nodes(void) {
     char filepath[PATH_MAX];
 
     NodeList *list = malloc(sizeof(NodeList));
@@ -204,7 +205,7 @@ static NodeList* process_stdin(void) {
         filepath[strcspn(filepath, "\n")] = '\0';
 
         // Add to node list
-        nodelist_add(list, filepath);
+        add_node(list, filepath);
     }
 
     return list;
@@ -241,7 +242,7 @@ static void print_nodes(NodeList *list, const char *format) {
 /**
  * Free node list memory
  */
-static void nodelist_free(NodeList *list) {
+static void free_nodes(NodeList *list) {
     if (list == NULL) return;
 
     for (int i = 0; i < list->count; i++) {
@@ -251,6 +252,96 @@ static void nodelist_free(NodeList *list) {
     }
     free(list->items);
     free(list);
+}
+
+/**
+ * Build edges from nodes by matching links to paths
+ */
+static EdgeList* build_edges(NodeList *nodes) {
+    EdgeList *edges = malloc(sizeof(EdgeList));
+    if (edges == NULL) {
+        fprintf(stderr, "Failed to allocate EdgeList\n");
+        exit(EXIT_FAILURE);
+    }
+    edges->items = NULL;
+    edges->count = 0;
+
+    // For each node
+    for (int i = 0; i < nodes->count; i++) {
+        Node *node = &nodes->items[i];
+
+        // Skip if no link
+        if (node->link == NULL) {
+            continue;
+        }
+
+        // Find the parent node by matching path with link
+        Node *parent = NULL;
+        for (int j = 0; j < nodes->count; j++) {
+            if (strstr(nodes->items[j].path, node->link) != NULL) {
+                parent = &nodes->items[j];
+                break;
+            }
+        }
+
+        if (parent == NULL) {
+            continue;  // Parent not found
+        }
+
+        // Grow edges array
+        Edge *tmp = realloc(edges->items, (edges->count + 1) * sizeof(Edge));
+        if (tmp == NULL) {
+            fprintf(stderr, "Failed to allocate memory for edges\n");
+            exit(EXIT_FAILURE);
+        }
+        edges->items = tmp;
+
+        // Create edge
+        Edge *edge = &edges->items[edges->count];
+        edge->src = node;
+        edge->dst = parent;
+
+        // Allocate and set label
+        edge->label = malloc(strlen("parent") + 1);
+        if (edge->label != NULL) {
+            strcpy(edge->label, "parent");
+        }
+
+        edges->count++;
+    }
+
+    return edges;
+}
+
+/**
+ * Print edges for debugging
+ */
+static void print_edges(EdgeList *edges) {
+    printf("\n*** Edges: %d ***\n\n", edges->count);
+    for (int i = 0; i < edges->count; i++) {
+        const char *src_title = edges->items[i].src->title ?
+                                edges->items[i].src->title :
+                                edges->items[i].src->path;
+        const char *dst_title = edges->items[i].dst->title ?
+                                edges->items[i].dst->title :
+                                edges->items[i].dst->path;
+        const char *label = edges->items[i].label ? edges->items[i].label : "";
+
+        printf("%d: [%s] --%s--> [%s]\n", i, src_title, label, dst_title);
+    }
+}
+
+/**
+ * Free edge list memory
+ */
+static void free_edges(EdgeList *edges) {
+    if (edges == NULL) return;
+
+    for (int i = 0; i < edges->count; i++) {
+        free(edges->items[i].label);
+    }
+    free(edges->items);
+    free(edges);
 }
 
 int tree(int argc, char **argv) {
@@ -276,13 +367,20 @@ int tree(int argc, char **argv) {
     compile_regexes();
 
     // Process input from stdin and build node list
-    NodeList *nodes = process_stdin();
+    NodeList *nodes = build_nodes();
+
+    // Build edges from nodes
+    EdgeList *edges = build_edges(nodes);
 
     // Print the node list
     print_nodes(nodes, format);
 
+    // Print edges for debugging
+    print_edges(edges);
+
     // Free memory
-    nodelist_free(nodes);
+    free_edges(edges);
+    free_nodes(nodes);
     free_regexes();
 
     return 0;
