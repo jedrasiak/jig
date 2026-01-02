@@ -17,11 +17,12 @@ static void help(void) {
     printf("\n");
     printf("Options:\n");
     printf("  -h, --help          Display this help and exit\n");
-    printf("  -f, --format FORMAT Output format (md for markdown)\n");
+    printf("  -f, --format FORMAT Output format (md for markdown, csv for CSV)\n");
     printf("\n");
     printf("Examples:\n");
-    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree       Generate tree from markdown files\n");
-    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree -f md  Output in markdown format\n");
+    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree        Generate tree from markdown files\n");
+    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree -f md   Output in markdown format\n");
+    printf("  jig find . -p \"\\.md$\" | jig filter | jig tree -f csv  Output in CSV format\n");
 }
 
 /**
@@ -88,6 +89,16 @@ static void print_nodes(NodeList *list, const char *format) {
         // Markdown format
         for (int i = 0; i < list->count; i++) {
             printf("[title](%s)\n", list->items[i].path);
+        }
+    } else if (format != NULL && strcmp(format, "csv") == 0) {
+        // CSV format
+        printf("id,title,path,link\n");
+        for (int i = 0; i < list->count; i++) {
+            printf("%s,%s,%s,%s\n",
+                   list->items[i].id[0] ? list->items[i].id : "",
+                   list->items[i].title ? list->items[i].title : "",
+                   list->items[i].path ? list->items[i].path : "",
+                   list->items[i].link ? list->items[i].link : "");
         }
     } else {
         // Default format
