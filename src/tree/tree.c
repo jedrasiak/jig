@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <limits.h>
+
 #include "tree.h"
 
 /**
@@ -18,6 +21,21 @@ static void help(void) {
     printf("  jig find . -p \"\\.md$\" | jig filter | jig tree    Generate tree from markdown files\n");
 }
 
+/**
+ * Read filepaths from stdin and print them
+ */
+static void process_stdin(void) {
+    char filepath[PATH_MAX];
+
+    while (fgets(filepath, sizeof(filepath), stdin) != NULL) {
+        // Remove trailing newline
+        filepath[strcspn(filepath, "\n")] = '\0';
+
+        // Print with # prefix
+        printf("# %s\n", filepath);
+    }
+}
+
 int tree(int argc, char **argv) {
     // Check for help flag
     if (argc >= 2) {
@@ -26,5 +44,9 @@ int tree(int argc, char **argv) {
             return 0;
         }
     }
+
+    // Process input from stdin
+    process_stdin();
+
     return 0;
 }
