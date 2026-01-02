@@ -212,30 +212,91 @@ static NodeList* build_nodes(void) {
 }
 
 /**
- * Print all nodes in the list
+ * Find children of a node using edges
+ * Returns number of children found
  */
-static void print_nodes(NodeList *list, const char *format) {
-    if (format != NULL && strcmp(format, "md") == 0) {
-        // Markdown format
-        for (int i = 0; i < list->count; i++) {
-            const char *title = list->items[i].title ? list->items[i].title : "title";
-            printf("[%s](%s)\n", title, list->items[i].path);
+static int get_children(EdgeList *edges, Node *parent, Node **children, int max_children) {
+    int count = 0;
+    for (int i = 0; i < edges->count && count < max_children; i++) {
+        if (edges->items[i].dst == parent) {
+            children[count++] = edges->items[i].src;
         }
-    } else if (format != NULL && strcmp(format, "csv") == 0) {
-        // CSV format
-        printf("id,title,path,link\n");
-        for (int i = 0; i < list->count; i++) {
-            printf("%s,%s,%s,%s\n",
-                   list->items[i].id[0] ? list->items[i].id : "",
-                   list->items[i].title ? list->items[i].title : "",
-                   list->items[i].path ? list->items[i].path : "",
-                   list->items[i].link ? list->items[i].link : "");
+    }
+    return count;
+}
+
+/**
+ * Print a node and its children recursively as a tree
+ */
+static void print_tree_node(Node *node, EdgeList *edges, int depth, char *prefix, int is_last, const char *format) {
+    // Print current node
+    if (depth == 0) {
+        // Root node - no prefix or connector
+        if (format != NULL && strcmp(format, "md") == 0) {
+            const char *title = node->title ? node->title : "title";
+            printf("[%s](%s)\n", title, node->path);
+        } else {
+            printf("%s\n", node->title ? node->title : node->path);
         }
     } else {
-        // Default format
-        for (int i = 0; i < list->count; i++) {
-            printf("%d: %s\n", i, list->items[i].path);
+        // Child node - print with tree connector
+        const char *connector = is_last ? "└── " : "├── ";
+        if (format != NULL && strcmp(format, "md") == 0) {
+            const char *title = node->title ? node->title : "title";
+            printf("%s%s[%s](%s)\n", prefix, connector, title, node->path);
+        } else {
+            printf("%s%s%s\n", prefix, connector, node->title ? node->title : node->path);
         }
+    }
+
+    // Find children using edges
+    Node *children[1024];  // Max children per node
+    int children_count = get_children(edges, node, children, 1024);
+
+    // Recursively print each child
+    for (int i = 0; i < children_count; i++) {
+        int is_child_last = (i == children_count - 1);
+
+        // Build prefix for child's descendants
+        char new_prefix[1024];
+        if (depth == 0) {
+            // Root node: children get empty prefix
+            new_prefix[0] = '\0';
+        } else {
+            // Non-root: add vertical bar or spaces
+            snprintf(new_prefix, sizeof(new_prefix), "%s%s",
+                     prefix,
+                     is_last ? "    " : "│   ");
+        }
+
+        // Recursively print this child
+        print_tree_node(children[i], edges, depth + 1, new_prefix, is_child_last, format);
+    }
+}
+
+/**
+ * Print tree structure starting from root nodes
+ */
+static void print_tree(NodeList *nodes, EdgeList *edges, const char *format) {
+    // Find and print all root nodes (nodes with no parent link)
+    for (int i = 0; i < nodes->count; i++) {
+        if (nodes->items[i].link == NULL) {
+            print_tree_node(&nodes->items[i], edges, 0, "", 0, format);
+        }
+    }
+}
+
+/**
+ * Print CSV format (will be moved to separate command later)
+ */
+static void print_csv(NodeList *list) {
+    printf("id,title,path,link\n");
+    for (int i = 0; i < list->count; i++) {
+        printf("%s,%s,%s,%s\n",
+               list->items[i].id[0] ? list->items[i].id : "",
+               list->items[i].title ? list->items[i].title : "",
+               list->items[i].path ? list->items[i].path : "",
+               list->items[i].link ? list->items[i].link : "");
     }
 }
 
@@ -316,20 +377,20 @@ static EdgeList* build_edges(NodeList *nodes) {
 /**
  * Print edges for debugging
  */
-static void print_edges(EdgeList *edges) {
-    printf("\n*** Edges: %d ***\n\n", edges->count);
-    for (int i = 0; i < edges->count; i++) {
-        const char *src_title = edges->items[i].src->title ?
-                                edges->items[i].src->title :
-                                edges->items[i].src->path;
-        const char *dst_title = edges->items[i].dst->title ?
-                                edges->items[i].dst->title :
-                                edges->items[i].dst->path;
-        const char *label = edges->items[i].label ? edges->items[i].label : "";
+// static void print_edges(EdgeList *edges) {
+//     printf("\n*** Edges: %d ***\n\n", edges->count);
+//     for (int i = 0; i < edges->count; i++) {
+//         const char *src_title = edges->items[i].src->title ?
+//                                 edges->items[i].src->title :
+//                                 edges->items[i].src->path;
+//         const char *dst_title = edges->items[i].dst->title ?
+//                                 edges->items[i].dst->title :
+//                                 edges->items[i].dst->path;
+//         const char *label = edges->items[i].label ? edges->items[i].label : "";
 
-        printf("%d: [%s] --%s--> [%s]\n", i, src_title, label, dst_title);
-    }
-}
+//         printf("%d: [%s] --%s--> [%s]\n", i, src_title, label, dst_title);
+//     }
+// }
 
 /**
  * Free edge list memory
@@ -372,11 +433,15 @@ int tree(int argc, char **argv) {
     // Build edges from nodes
     EdgeList *edges = build_edges(nodes);
 
-    // Print the node list
-    print_nodes(nodes, format);
+    // Print output based on format
+    if (format != NULL && strcmp(format, "csv") == 0) {
+        print_csv(nodes);
+    } else {
+        // Default: print tree structure (supports -f md)
+        print_tree(nodes, edges, format);
+    }
 
-    // Print edges for debugging
-    print_edges(edges);
+    // print_edges(edges);  // DEBUG
 
     // Free memory
     free_edges(edges);
