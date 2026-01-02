@@ -11,7 +11,6 @@ typedef struct {
 typedef struct {
     Node *items;
     int count;
-    int capacity;
 } NodeList;
 
 #endif /* NODE_H */

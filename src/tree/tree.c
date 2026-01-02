@@ -4,6 +4,7 @@
 #include <limits.h>
 
 #include "tree.h"
+#include "node/node.h"
 
 /**
  * Display help message
@@ -22,10 +23,49 @@ static void help(void) {
 }
 
 /**
- * Read filepaths from stdin and print them
+ * Add node to list (realloc for each item)
  */
-static void process_stdin(void) {
+static void nodelist_add(NodeList *list, const char *filepath) {
+    // Grow array by one item
+    Node *tmp = realloc(list->items, (list->count + 1) * sizeof(Node));
+    if (tmp == NULL) {
+        fprintf(stderr, "Failed to allocate memory for nodes\n");
+        exit(EXIT_FAILURE);
+    }
+    list->items = tmp;
+
+    // Create new node
+    Node *node = &list->items[list->count];
+
+    // Allocate and copy path
+    node->path = malloc(strlen(filepath) + 1);
+    if (node->path == NULL) {
+        fprintf(stderr, "Failed to allocate memory for path\n");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(node->path, filepath);
+
+    // Initialize other fields to NULL/empty
+    node->id[0] = '\0';
+    node->link = NULL;
+    node->title = NULL;
+
+    list->count++;
+}
+
+/**
+ * Read filepaths from stdin and build node list
+ */
+static NodeList* process_stdin(void) {
     char filepath[PATH_MAX];
+
+    NodeList *list = malloc(sizeof(NodeList));
+    if (list == NULL) {
+        fprintf(stderr, "Failed to allocate NodeList\n");
+        exit(EXIT_FAILURE);
+    }
+    list->items = NULL;
+    list->count = 0;
 
     while (fgets(filepath, sizeof(filepath), stdin) != NULL) {
         // Remove trailing newline
@@ -33,7 +73,37 @@ static void process_stdin(void) {
 
         // Print with # prefix
         printf("# %s\n", filepath);
+
+        // Add to node list
+        nodelist_add(list, filepath);
     }
+
+    return list;
+}
+
+/**
+ * Print all nodes in the list
+ */
+static void print_nodes(NodeList *list) {
+    printf("\n*** Nodes in list: %d ***\n\n", list->count);
+    for (int i = 0; i < list->count; i++) {
+        printf("%d: %s\n", i, list->items[i].path);
+    }
+}
+
+/**
+ * Free node list memory
+ */
+static void nodelist_free(NodeList *list) {
+    if (list == NULL) return;
+
+    for (int i = 0; i < list->count; i++) {
+        free(list->items[i].path);
+        free(list->items[i].link);
+        free(list->items[i].title);
+    }
+    free(list->items);
+    free(list);
 }
 
 int tree(int argc, char **argv) {
@@ -45,8 +115,14 @@ int tree(int argc, char **argv) {
         }
     }
 
-    // Process input from stdin
-    process_stdin();
+    // Process input from stdin and build node list
+    NodeList *nodes = process_stdin();
+
+    // Print the node list
+    print_nodes(nodes);
+
+    // Free memory
+    nodelist_free(nodes);
 
     return 0;
 }
