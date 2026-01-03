@@ -12,7 +12,7 @@ BIN_DIR = bin
 TARGET = $(BIN_DIR)/jig
 
 # Source files
-SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/filter/filter.c $(SRC_DIR)/find/find.c $(SRC_DIR)/tree/tree.c
+SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/filter/filter.c $(SRC_DIR)/find/find.c $(SRC_DIR)/nodes/nodes.c $(SRC_DIR)/edges/edges.c $(SRC_DIR)/tree/tree.c
 
 # Object files (converts .c paths to .o paths in build directory)
 OBJECTS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SOURCES))
