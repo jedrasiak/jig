@@ -2,3 +2,5 @@
 /build
 /playground
 /tests/data
+
+*.swp
