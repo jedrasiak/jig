@@ -6,13 +6,13 @@ CFLAGS = -Wall -Wextra -Werror -I. -I..
 TARGET = ../../bin/jig-tree
 
 # Source files
-SOURCES = tree.c tree-cli.c
+SOURCES = tree.c tree-cli.c ../nodes/nodes.c ../edges/edges.c
 
 # Default target
 all: $(TARGET)
 
 # Build the executable
-$(TARGET): $(SOURCES) tree.h
+$(TARGET): $(SOURCES) tree.h ../nodes/nodes.h ../edges/edges.h
 	$(CC) $(CFLAGS) $(SOURCES) -o $(TARGET)
 	@echo "Built $(TARGET)"
 

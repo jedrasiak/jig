@@ -133,17 +133,28 @@ jig find ./notes | jig filter | jig nodes | jig edges | jig tree > hierarchy.txt
 ### Building from Source
 
 ```bash
-# Build the project
+# Build jig + all standalone module binaries
 make
 
-# Clean build artifacts
+# Build only standalone module binaries
+make modules
+
+# Clean build artifacts (preserves other bin/ contents like scripts)
 make clean
 
 # Rebuild from scratch
 make rebuild
 ```
 
-The executable will be created at `bin/jig`.
+The build creates:
+- `bin/jig` - Main executable with all commands
+- `bin/jig-filter` - Standalone filter binary
+- `bin/jig-find` - Standalone find binary
+- `bin/jig-nodes` - Standalone nodes binary
+- `bin/jig-edges` - Standalone edges binary
+- `bin/jig-tree` - Standalone tree binary
+
+All binaries are distributed together, enabling both subcommand mode (`jig filter`) and standalone mode (`jig-filter`).
 
 ### Manual Compilation
 
@@ -202,7 +213,14 @@ jig/
 
 **Standard build:**
 ```bash
+# Build main executable + all module binaries
 make
+
+# Build only module binaries
+make modules
+
+# Clean (preserves scripts in bin/)
+make clean
 ```
 
 **Testing individual modules:**
@@ -210,13 +228,17 @@ make
 Each module has a standalone Makefile for isolated testing:
 
 ```bash
+# Build a single module
 cd src/filter && make
 cd src/find && make
 cd src/nodes && make
 
-# Run standalone
-./bin/<module>-cli <args>
+# Run standalone module binary
+bin/jig-filter <args>
+bin/jig-find <args>
 ```
+
+Module binaries are built automatically by the main Makefile, but can also be built individually for development and testing.
 
 ### Compilation
 

@@ -18,7 +18,7 @@ SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/filter/filter.c $(SRC_DIR)/find/find.c $(
 OBJECTS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SOURCES))
 
 # Default target
-all: $(TARGET)
+all: $(TARGET) modules
 
 # Link executable
 $(TARGET): $(OBJECTS) | $(BIN_DIR)
@@ -38,12 +38,29 @@ $(BUILD_DIR):
 $(BIN_DIR):
 	@mkdir -p $(BIN_DIR)
 
+# Build all module binaries
+modules:
+	@$(MAKE) -C $(SRC_DIR)/filter
+	@$(MAKE) -C $(SRC_DIR)/find
+	@$(MAKE) -C $(SRC_DIR)/nodes
+	@$(MAKE) -C $(SRC_DIR)/edges
+	@$(MAKE) -C $(SRC_DIR)/tree
+
 # Clean build artifacts
-clean:
-	@rm -rf $(BUILD_DIR) $(BIN_DIR)
+clean: clean-modules
+	@rm -rf $(BUILD_DIR)
+	@rm -f $(TARGET)
 	@echo "CLEAN"
+
+# Clean module binaries
+clean-modules:
+	@$(MAKE) -C $(SRC_DIR)/filter clean
+	@$(MAKE) -C $(SRC_DIR)/find clean
+	@$(MAKE) -C $(SRC_DIR)/nodes clean
+	@$(MAKE) -C $(SRC_DIR)/edges clean
+	@$(MAKE) -C $(SRC_DIR)/tree clean
 
 # Rebuild from scratch
 rebuild: clean all
 
-.PHONY: all clean rebuild
+.PHONY: all modules clean clean-modules rebuild
