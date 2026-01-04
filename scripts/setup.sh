@@ -2,8 +2,9 @@
 # Adds the project's /bin directory to the PATH in ~/.bashrc if not already added
 
 # --- CONFIG ---
-# Automatically detect the repo root (where this script is located)
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Automatically detect the repo root (script is in scripts/ directory)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BIN_DIR="$REPO_DIR/bin"
 BASHRC="$HOME/.bashrc"
 

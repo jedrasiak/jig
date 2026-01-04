@@ -130,6 +130,50 @@ jig find ./notes | jig filter | jig nodes | jig edges | jig tree > hierarchy.txt
 
 ## Installation
 
+### For End Users
+
+Download the latest release and run the installation script:
+
+```bash
+# Extract the archive
+tar -xzf jig-v1.0.0-linux-x64.tar.gz
+cd jig-v1.0.0-linux-x64
+
+# Install to ~/.local/bin
+./install.sh
+
+# Or run without execute permission
+bash install.sh
+```
+
+**What install.sh does:**
+- Copies the `jig` binary to `~/.local/bin`
+- Creates `~/.local/bin` if it doesn't exist
+- Checks if `~/.local/bin` is in your PATH
+- Provides instructions to add it to PATH if needed
+
+**If ~/.local/bin is not in your PATH:**
+
+Add this line to your shell configuration file:
+
+```bash
+# For bash users (~/.bashrc)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# For zsh users (~/.zshrc)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**Uninstalling:**
+
+```bash
+./uninstall.sh
+```
+
+This removes the `jig` binary from `~/.local/bin` and optionally removes the directory if it's empty.
+
 ### Building from Source
 
 ```bash
@@ -171,15 +215,6 @@ gcc -Wall -Wextra -Werror -I./src \
   -o bin/jig
 ```
 
-### Adding to PATH
-
-To use `jig` globally:
-
-```bash
-# Add to your shell profile (~/.bashrc, ~/.zshrc, etc.)
-export PATH="$PATH:/path/to/jig/bin"
-```
-
 ## Documentation
 
 Each command has detailed documentation in man page format:
@@ -203,11 +238,36 @@ jig/
 │   ├── nodes/          # Nodes module
 │   ├── edges/          # Edges module
 │   └── tree/           # Tree module
+├── bin/                # Final executables (generated)
+│   ├── jig             # Main executable
+│   ├── jig-*           # Standalone module binaries
+│   ├── install.sh      # User installation script
+│   └── uninstall.sh    # User uninstallation script
+├── scripts/            # Developer tools
+│   └── setup.sh        # Developer setup script
 ├── build/              # Compiled object files (generated)
-├── bin/                # Final executable (generated)
 ├── datasets/           # Test data for development
 └── Makefile            # Build configuration
 ```
+
+### Developer Setup
+
+For development, use the setup script to add the local `bin/` directory to your PATH:
+
+```bash
+# Run the setup script
+bash scripts/setup.sh
+```
+
+**What scripts/setup.sh does:**
+- Adds the project's `bin/` directory to your PATH in `~/.bashrc`
+- Allows you to run `jig` directly from the development directory
+- Only modifies PATH if not already added
+- Useful for testing changes without reinstalling
+
+**Difference from install.sh:**
+- `scripts/setup.sh` - For developers, adds `bin/` to PATH (runs from source)
+- `bin/install.sh` - For end users, copies binary to `~/.local/bin` (installed copy)
 
 ### Building
 
