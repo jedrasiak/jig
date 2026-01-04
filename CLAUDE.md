@@ -71,16 +71,23 @@ Each module contains:
 Commands are designed to work together in pipelines:
 
 ```bash
-# Typical usage pattern
-jig find . -p '\.md$' | jig filter | jig nodes | jig edges | jig tree
+# Typical usage pattern for visualization
+jig find . -p '\.md$' | jig filter | jig tree
+
+# Alternative: extract data for analysis
+jig find . -p '\.md$' | jig filter | jig nodes | jig edges
 ```
 
-**Data flow:**
+**Data flow for visualization:**
+1. `find` - Outputs file paths (one per line)
+2. `filter` - Validates files, outputs valid paths
+3. `tree` - Parses files, builds relationships internally, visualizes hierarchy as ASCII tree
+
+**Data flow for analysis:**
 1. `find` - Outputs file paths (one per line)
 2. `filter` - Validates files, outputs valid paths
 3. `nodes` - Parses files, outputs node CSV
 4. `edges` - Builds relationships, outputs edge CSV
-5. `tree` - Visualizes hierarchy as ASCII tree
 
 ### Module Details
 
@@ -116,10 +123,12 @@ jig find . -p '\.md$' | jig filter | jig nodes | jig edges | jig tree
 - Edge label is typically "parent"
 
 **6. tree** - Visualization (`src/tree/`)
-- Reads edge CSV from stdin
-- Builds hierarchical tree structure
+- Reads file paths from stdin
+- Parses files to extract nodes (using `build_nodes_from_stdin()`)
+- Builds edges internally from parent links (using `build_edges_from_nodes()`)
 - Renders ASCII tree with Unicode box-drawing characters
 - Displays parent-child relationships
+- Optional markdown format with `-f md` flag
 
 ### Data Structures
 
@@ -248,7 +257,7 @@ jig find . | jig filter | jig nodes | tail -n +2 | cut -d, -f2
 jig find . | jig filter | jig nodes | tail -n +2 | awk -F, '$4 == ""'
 
 # Visualize full hierarchy
-jig find . -p '\.md$' | jig filter | jig nodes | jig edges | jig tree
+jig find . -p '\.md$' | jig filter | jig tree
 ```
 
 ## Compilation Flags

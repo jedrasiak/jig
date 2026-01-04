@@ -7,8 +7,8 @@
 ## SYNOPSIS
 
 ```
-jig filter <filepath>
-jig-filter <filepath>
+jig filter [OPTIONS] [FILE]
+jig-filter [OPTIONS] [FILE]
 <command> | jig filter
 <command> | jig-filter
 ```
@@ -23,6 +23,10 @@ A valid note file must contain:
 - A `title` property in the frontmatter
 
 Files that do not meet these requirements are silently filtered out.
+
+## OPTIONS
+
+- **-h, --help** - Display help information and exit
 
 ## USAGE
 

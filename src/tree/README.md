@@ -13,7 +13,7 @@ jig-tree [OPTIONS]
 
 ## DESCRIPTION
 
-**jig-tree** reads edge CSV data from stdin, builds a hierarchical tree structure from the relationships, and renders an ASCII tree visualization using Unicode box-drawing characters.
+**jig-tree** reads file paths from stdin, extracts node information from each file, builds parent-child relationships from the parent links, and renders an ASCII tree visualization using Unicode box-drawing characters.
 
 The command processes parent-child relationships between nodes and displays them as an indented tree, making it easy to visualize the structure of your knowledge graph or note hierarchy.
 
@@ -22,13 +22,17 @@ Nodes without parents are displayed as root nodes. Each node shows its title, an
 ## OPTIONS
 
 - **-h, --help** - Display help information and exit
+- **-f, --format FORMAT** - Output format (md for markdown links)
 
 ## INPUT FORMAT
 
-Expects CSV from stdin with columns: src_id,src_title,dst_id,dst_title,label,src_path,dst_path
-(This is the output format from jig-edges)
+Expects file paths from stdin (one per line).
+Typically used after jig-filter to read validated note files.
 
-The tree builder processes edges where the label is "parent" to construct the hierarchy.
+Each file should have YAML frontmatter with:
+- `id` - Unique identifier
+- `title` - Node title
+- Optional parent link: `[text](path?label=parent)`
 
 ## OUTPUT FORMAT
 
@@ -49,7 +53,7 @@ Each node is displayed with its title, and the tree structure shows parent-child
 
 Visualize the complete note hierarchy:
 ```bash
-$ jig find . -p '\.md$' | jig filter | jig nodes | jig edges | jig tree
+$ jig find . -p '\.md$' | jig filter | jig tree
 Project Overview
 ├── Task List
 │   ├── Feature A
@@ -61,10 +65,21 @@ Project Overview
 Use with specific directories:
 ```bash
 # Visualize only notes in a specific directory
-$ jig find ./notes -p '\.md$' | jig filter | jig nodes | jig edges | jig tree
+$ jig find ./notes -p '\.md$' | jig filter | jig tree
 
 # Combine with grep to filter specific branches
-$ jig find . | jig filter | jig nodes | jig edges | jig tree | grep -A 5 "Project"
+$ jig find . | jig filter | jig tree | grep -A 5 "Project"
+```
+
+Output with markdown links:
+```bash
+$ jig find . -p '\.md$' | jig filter | jig tree -f md
+[Project Overview](./project.md)
+├── [Task List](./tasks.md)
+│   ├── [Feature A](./feature-a.md)
+│   └── [Feature B](./feature-b.md)
+└── [Documentation](./docs.md)
+    └── [API Reference](./api.md)
 ```
 
 ## USAGE
@@ -72,19 +87,19 @@ $ jig find . | jig filter | jig nodes | jig edges | jig tree | grep -A 5 "Projec
 ### Full pipeline example
 ```bash
 # Complete workflow from finding files to visualization
-jig find . -p '\.md$' | jig filter | jig nodes | jig edges | jig tree
+jig find . -p '\.md$' | jig filter | jig tree
 ```
 
 ### Save tree to file
 ```bash
 # Export tree structure to a text file
-jig find ./notes | jig filter | jig nodes | jig edges | jig tree > hierarchy.txt
+jig find ./notes | jig filter | jig tree > hierarchy.txt
 ```
 
 ### Focus on specific paths
 ```bash
 # Visualize only specific subdirectories
-jig find ./docs -p '\.md$' | jig filter | jig nodes | jig edges | jig tree
+jig find ./docs -p '\.md$' | jig filter | jig tree
 ```
 
 ## BEHAVIOR

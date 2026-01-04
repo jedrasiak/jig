@@ -21,7 +21,7 @@ This design enables powerful workflows by chaining simple tools together.
 make
 
 # Visualize your note hierarchy
-jig find . -p '\.md$' | jig filter | jig nodes | jig edges | jig tree
+jig find . -p '\.md$' | jig filter | jig tree
 ```
 
 ## Commands
@@ -43,8 +43,11 @@ Each command can be invoked as `jig <command>` (subcommand mode) or `jig-<comman
 The typical workflow chains commands together:
 
 ```bash
-# Complete pipeline: find → filter → nodes → edges → tree
-jig find . -p '\.md$' | jig filter | jig nodes | jig edges | jig tree
+# Visualize note hierarchy: find → filter → tree
+jig find . -p '\.md$' | jig filter | jig tree
+
+# Or extract and analyze data: find → filter → nodes → edges
+jig find . -p '\.md$' | jig filter | jig nodes | jig edges
 ```
 
 Output:
@@ -125,7 +128,7 @@ jig find . | jig filter | jig nodes | tail -n +2 | awk -F, '$4 == ""'
 jig find . | jig filter | jig nodes | jig edges | tail -n +2 | wc -l
 
 # Export tree structure
-jig find ./notes | jig filter | jig nodes | jig edges | jig tree > hierarchy.txt
+jig find ./notes | jig filter | jig tree > hierarchy.txt
 ```
 
 ## Installation
