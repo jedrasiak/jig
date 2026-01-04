@@ -75,7 +75,3 @@ notes/summary.md
 2. **Standalone mode**: `jig-filter <args>` - called as a standalone executable
 
 Both modes provide identical functionality.
-
-## SEE ALSO
-
-jig(1), jig-tree(1), jig-search-re(1)

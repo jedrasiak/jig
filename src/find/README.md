@@ -150,7 +150,3 @@ Examples:
 2. **Standalone mode**: `jig-find <args>` - called as a standalone executable
 
 Both modes provide identical functionality.
-
-## SEE ALSO
-
-jig(1), jig-filter(1), jig-tree(1), find(1)

@@ -60,6 +60,11 @@ jig find . | jig filter | jig nodes | jig edges | tail -n +2 | wc -l
 jig find . | jig filter | jig nodes | jig edges | grep ",parent,"
 ```
 
-## SEE ALSO
+## INVOCATION MODES
 
-jig-find(1), jig-filter(1), jig-nodes(1), jig-tree(1)
+**jig-edges** can be invoked in two ways:
+
+1. **Subcommand mode**: `jig edges <args>` - called as a subcommand of the main `jig` executable
+2. **Standalone mode**: `jig-edges <args>` - called as a standalone executable
+
+Both modes provide identical functionality.
