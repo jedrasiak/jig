@@ -1,6 +1,16 @@
 #ifndef NODES_H
 #define NODES_H
 
+/**
+ * Represents a single node in the knowledge graph
+ * Parsed from markdown file with YAML frontmatter
+ *
+ * Fields:
+ *   id    - Unique identifier (max 36 chars, typically UUID)
+ *   path  - Full file path to the source file
+ *   link  - Parent link path extracted from markdown
+ *   title - Human-readable node title
+ */
 typedef struct {
     char id[37];
     char *path;
@@ -8,6 +18,13 @@ typedef struct {
     char *title;
 } Node;
 
+/**
+ * Dynamic array of nodes
+ *
+ * Fields:
+ *   items - Array of Node structures
+ *   count - Number of nodes in the array
+ */
 typedef struct {
     Node *items;
     int count;
