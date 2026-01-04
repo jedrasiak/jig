@@ -1,6 +1,6 @@
 /bin
 /build
 /playground
-/tests/data
 
 *.swp
+TODO.md
