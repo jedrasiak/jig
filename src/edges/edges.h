@@ -4,6 +4,20 @@
 #include "nodes/nodes.h"
 
 /**
+ * Represents a markdown link extracted from file content
+ */
+typedef struct {
+    char *text;      // Link text (e.g., "parent note")
+    char *path;      // Link path (e.g., "/father/index.md")
+    char *label;     // Extracted label (e.g., "parent") or default "link"
+} Link;
+
+typedef struct {
+    Link *items;
+    int count;
+} LinkList;
+
+/**
  * Represents a directed edge (relationship) between two nodes
  *
  * Fields:

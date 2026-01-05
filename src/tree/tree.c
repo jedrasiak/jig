@@ -26,12 +26,16 @@ static void help(void) {
 
 /**
  * Find children of a node using edges
+ * Only considers parent edges for tree visualization
  * Returns number of children found
  */
 static int get_children(EdgeList *edges, Node *parent, Node **children, int max_children) {
     int count = 0;
     for (int i = 0; i < edges->count && count < max_children; i++) {
-        if (edges->items[i].dst == parent) {
+        // Only consider parent edges for tree visualization
+        if (edges->items[i].dst == parent &&
+            edges->items[i].label != NULL &&
+            strcmp(edges->items[i].label, "parent") == 0) {
             children[count++] = edges->items[i].src;
         }
     }
@@ -91,9 +95,21 @@ static void print_tree_node(Node *node, EdgeList *edges, int depth, char *prefix
  * Print tree structure starting from root nodes
  */
 static void print_tree(NodeList *nodes, EdgeList *edges, const char *format) {
-    // Find and print all root nodes (nodes with no parent link)
+    // Find root nodes (nodes with no outgoing parent edge)
     for (int i = 0; i < nodes->count; i++) {
-        if (nodes->items[i].link == NULL) {
+        int is_root = 1;
+
+        // Check if node has a parent edge pointing out
+        for (int j = 0; j < edges->count; j++) {
+            if (edges->items[j].src == &nodes->items[i] &&
+                edges->items[j].label != NULL &&
+                strcmp(edges->items[j].label, "parent") == 0) {
+                is_root = 0;
+                break;
+            }
+        }
+
+        if (is_root) {
             print_tree_node(&nodes->items[i], edges, 0, "", 0, format);
         }
     }
