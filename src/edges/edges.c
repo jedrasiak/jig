@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <regex.h>
 
 #include "edges.h"
 
@@ -28,61 +29,243 @@ static void help(void) {
 }
 
 /**
- * Build edges from nodes by matching links to paths
+ * Extract label from query parameter in URL
+ * Input: "/path/file.md?label=parent&other=value"
+ * Output: "parent" (allocated string)
+ * Returns NULL if no label parameter found
+ */
+static char* extract_label_from_url(const char *url) {
+    // Find start of query string
+    char *query_start = strchr(url, '?');
+    if (query_start == NULL) return NULL;
+
+    // Find label parameter
+    char *label_param = strstr(query_start, "label=");
+    if (label_param == NULL) return NULL;
+
+    // Move past "label="
+    char *label_start = label_param + 6;
+
+    // Find end of label value (& or end of string)
+    char *label_end = strchr(label_start, '&');
+    size_t label_len = label_end ? (size_t)(label_end - label_start) : strlen(label_start);
+
+    if (label_len == 0) return NULL;
+
+    // Allocate and copy
+    char *label = malloc(label_len + 1);
+    if (label == NULL) return NULL;
+    strncpy(label, label_start, label_len);
+    label[label_len] = '\0';
+
+    return label;
+}
+
+/**
+ * Extract all markdown links from content
+ * Pattern: [text](url) or [text](url?label=X)
+ * Returns LinkList* or NULL on error
+ */
+static LinkList* extract_links_from_content(const char *content) {
+    regex_t rgx;
+    regmatch_t matches[3];
+
+    // Compile regex for markdown links: \[([^][]*)\]\(([^)]+)\)
+    char *pattern = "\\[([^][]*)\\]\\(([^)]+)\\)";
+    if (regcomp(&rgx, pattern, REG_EXTENDED) != 0) {
+        return NULL;
+    }
+
+    LinkList *list = malloc(sizeof(LinkList));
+    if (list == NULL) {
+        regfree(&rgx);
+        return NULL;
+    }
+    list->items = NULL;
+    list->count = 0;
+
+    // Find all matches
+    const char *cursor = content;
+    while (regexec(&rgx, cursor, 3, matches, 0) == 0) {
+        // Extract text (group 1)
+        int text_len = matches[1].rm_eo - matches[1].rm_so;
+        char *text = malloc(text_len + 1);
+        if (text == NULL) {
+            regfree(&rgx);
+            for (int i = 0; i < list->count; i++) {
+                free(list->items[i].text);
+                free(list->items[i].path);
+                free(list->items[i].label);
+            }
+            free(list->items);
+            free(list);
+            return NULL;
+        }
+        strncpy(text, cursor + matches[1].rm_so, text_len);
+        text[text_len] = '\0';
+
+        // Extract URL (group 2)
+        int url_len = matches[2].rm_eo - matches[2].rm_so;
+        char *url = malloc(url_len + 1);
+        if (url == NULL) {
+            free(text);
+            regfree(&rgx);
+            for (int i = 0; i < list->count; i++) {
+                free(list->items[i].text);
+                free(list->items[i].path);
+                free(list->items[i].label);
+            }
+            free(list->items);
+            free(list);
+            return NULL;
+        }
+        strncpy(url, cursor + matches[2].rm_so, url_len);
+        url[url_len] = '\0';
+
+        // Extract label from URL or use default
+        char *label = extract_label_from_url(url);
+        if (label == NULL) {
+            label = strdup("link");
+        }
+
+        // Add to list (realloc, store values)
+        Link *tmp = realloc(list->items, (list->count + 1) * sizeof(Link));
+        if (tmp == NULL) {
+            free(text);
+            free(url);
+            free(label);
+            regfree(&rgx);
+            for (int i = 0; i < list->count; i++) {
+                free(list->items[i].text);
+                free(list->items[i].path);
+                free(list->items[i].label);
+            }
+            free(list->items);
+            free(list);
+            return NULL;
+        }
+        list->items = tmp;
+
+        list->items[list->count].text = text;
+        list->items[list->count].path = url;
+        list->items[list->count].label = label;
+        list->count++;
+
+        // Move cursor past this match
+        cursor += matches[0].rm_eo;
+    }
+
+    regfree(&rgx);
+    return list;
+}
+
+/**
+ * Extract all markdown links from a file
+ */
+static LinkList* extract_links_from_file(const char *filepath) {
+    FILE *fptr = fopen(filepath, "r");
+    if (fptr == NULL) return NULL;
+
+    // Read file size
+    fseek(fptr, 0L, SEEK_END);
+    long filesize = ftell(fptr);
+    fseek(fptr, 0L, SEEK_SET);
+
+    // Read content
+    char *content = malloc(filesize + 1);
+    if (content == NULL) {
+        fclose(fptr);
+        return NULL;
+    }
+
+    fread(content, 1, filesize, fptr);
+    content[filesize] = '\0';
+    fclose(fptr);
+
+    // Extract links
+    LinkList *links = extract_links_from_content(content);
+    free(content);
+
+    return links;
+}
+
+/**
+ * Free link list memory
+ */
+static void free_links(LinkList *list) {
+    if (list == NULL) return;
+    for (int i = 0; i < list->count; i++) {
+        free(list->items[i].text);
+        free(list->items[i].path);
+        free(list->items[i].label);
+    }
+    free(list->items);
+    free(list);
+}
+
+/**
+ * Build edges from nodes by extracting all links from files
  * Returns EdgeList* or NULL on error
  */
 EdgeList* build_edges_from_nodes(NodeList *nodes) {
     EdgeList *edges = malloc(sizeof(EdgeList));
-    if (edges == NULL) {
-        fprintf(stderr, "Failed to allocate EdgeList\n");
-        return NULL;
-    }
+    if (edges == NULL) return NULL;
     edges->items = NULL;
     edges->count = 0;
 
-    // For each node
+    // For each source node
     for (int i = 0; i < nodes->count; i++) {
-        Node *node = &nodes->items[i];
+        Node *src_node = &nodes->items[i];
 
-        // Skip if no link
-        if (node->link == NULL) {
-            continue;
-        }
+        // Extract all links from this file
+        LinkList *links = extract_links_from_file(src_node->path);
+        if (links == NULL) continue;
 
-        // Find the parent node by matching path with link
-        Node *parent = NULL;
-        for (int j = 0; j < nodes->count; j++) {
-            if (strstr(nodes->items[j].path, node->link) != NULL) {
-                parent = &nodes->items[j];
-                break;
+        // For each link found
+        for (int j = 0; j < links->count; j++) {
+            Link *link = &links->items[j];
+
+            // Strip query string from link path for matching
+            char *query_pos = strchr(link->path, '?');
+            char link_path_clean[1024];
+            if (query_pos != NULL) {
+                size_t path_len = query_pos - link->path;
+                strncpy(link_path_clean, link->path, path_len);
+                link_path_clean[path_len] = '\0';
+            } else {
+                strncpy(link_path_clean, link->path, sizeof(link_path_clean) - 1);
+                link_path_clean[sizeof(link_path_clean) - 1] = '\0';
             }
+
+            // Find target node by matching path (using strstr)
+            Node *dst_node = NULL;
+            for (int k = 0; k < nodes->count; k++) {
+                if (strstr(nodes->items[k].path, link_path_clean) != NULL) {
+                    dst_node = &nodes->items[k];
+                    break;
+                }
+            }
+
+            if (dst_node == NULL) continue;  // Target not found
+
+            // Create edge
+            Edge *tmp = realloc(edges->items, (edges->count + 1) * sizeof(Edge));
+            if (tmp == NULL) {
+                free_links(links);
+                free_edges(edges);
+                return NULL;
+            }
+            edges->items = tmp;
+
+            Edge *edge = &edges->items[edges->count];
+            edge->src = src_node;
+            edge->dst = dst_node;
+            edge->label = strdup(link->label);  // Copy label from link
+
+            edges->count++;
         }
 
-        if (parent == NULL) {
-            continue;  // Parent not found
-        }
-
-        // Grow edges array
-        Edge *tmp = realloc(edges->items, (edges->count + 1) * sizeof(Edge));
-        if (tmp == NULL) {
-            fprintf(stderr, "Failed to allocate memory for edges\n");
-            free_edges(edges);
-            return NULL;
-        }
-        edges->items = tmp;
-
-        // Create edge
-        Edge *edge = &edges->items[edges->count];
-        edge->src = node;
-        edge->dst = parent;
-
-        // Allocate and set label
-        edge->label = malloc(strlen("parent") + 1);
-        if (edge->label != NULL) {
-            strcpy(edge->label, "parent");
-        }
-
-        edges->count++;
+        free_links(links);
     }
 
     return edges;
@@ -123,7 +306,7 @@ void free_edges(EdgeList *edges) {
 
 /**
  * Parse a CSV line into a Node
- * Expected format: id,title,path,link
+ * Expected format: id,title,path
  * Returns 0 on success, 1 on error
  */
 static int parse_node_csv_line(Node *node, const char *line) {
@@ -136,7 +319,6 @@ static int parse_node_csv_line(Node *node, const char *line) {
     node->id[0] = '\0';
     node->title = NULL;
     node->path = NULL;
-    node->link = NULL;
 
     // Parse CSV fields
     char *token;
@@ -144,7 +326,7 @@ static int parse_node_csv_line(Node *node, const char *line) {
     int field = 0;
 
     token = strtok_r(line_copy, ",", &saveptr);
-    while (token != NULL && field < 4) {
+    while (token != NULL && field < 3) {
         switch (field) {
             case 0:  // id
                 strncpy(node->id, token, 36);
@@ -158,11 +340,6 @@ static int parse_node_csv_line(Node *node, const char *line) {
             case 2:  // path
                 if (strlen(token) > 0) {
                     node->path = strdup(token);
-                }
-                break;
-            case 3:  // link
-                if (strlen(token) > 0) {
-                    node->link = strdup(token);
                 }
                 break;
         }
@@ -213,7 +390,6 @@ static NodeList* read_nodes_from_csv(void) {
             for (int i = 0; i < list->count; i++) {
                 free(list->items[i].title);
                 free(list->items[i].path);
-                free(list->items[i].link);
             }
             free(list->items);
             free(list);
@@ -242,7 +418,6 @@ static void free_csv_nodes(NodeList *list) {
     for (int i = 0; i < list->count; i++) {
         free(list->items[i].title);
         free(list->items[i].path);
-        free(list->items[i].link);
     }
     free(list->items);
     free(list);

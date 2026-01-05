@@ -8,13 +8,11 @@
  * Fields:
  *   id    - Unique identifier (max 36 chars, typically UUID)
  *   path  - Full file path to the source file
- *   link  - Parent link path extracted from markdown
  *   title - Human-readable node title
  */
 typedef struct {
     char id[37];
     char *path;
-    char *link;
     char *title;
 } Node;
 
@@ -44,7 +42,7 @@ int init_node_parser(void);
 void cleanup_node_parser(void);
 
 /**
- * Parse node fields (id, title, link) from file
+ * Parse node fields (id, title) from file
  * Must call init_node_parser() first
  */
 void parse_node(Node *node, const char *filepath);
@@ -64,7 +62,7 @@ NodeList* build_nodes_from_stdin(void);
 
 /**
  * Print nodes as CSV to stdout
- * Format: id,title,path,link
+ * Format: id,title,path
  */
 void print_nodes_csv(NodeList *list);
 
