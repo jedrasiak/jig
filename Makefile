@@ -12,7 +12,7 @@ BIN_DIR = bin
 TARGET = $(BIN_DIR)/jig
 
 # Source files
-SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/filter/filter.c $(SRC_DIR)/find/find.c $(SRC_DIR)/nodes/nodes.c $(SRC_DIR)/edges/edges.c $(SRC_DIR)/tree/tree.c
+SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/filter/filter.c $(SRC_DIR)/find/find.c $(SRC_DIR)/nodes/nodes.c $(SRC_DIR)/edges/edges.c $(SRC_DIR)/tree/tree.c $(SRC_DIR)/note/note.c $(SRC_DIR)/uuid/uuid.c $(SRC_DIR)/slugify/slugify.c
 
 # Object files (converts .c paths to .o paths in build directory)
 OBJECTS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SOURCES))
@@ -45,6 +45,7 @@ modules:
 	@$(MAKE) -C $(SRC_DIR)/nodes
 	@$(MAKE) -C $(SRC_DIR)/edges
 	@$(MAKE) -C $(SRC_DIR)/tree
+	@$(MAKE) -C $(SRC_DIR)/note
 
 # Clean build artifacts
 clean: clean-modules
@@ -59,6 +60,7 @@ clean-modules:
 	@$(MAKE) -C $(SRC_DIR)/nodes clean
 	@$(MAKE) -C $(SRC_DIR)/edges clean
 	@$(MAKE) -C $(SRC_DIR)/tree clean
+	@$(MAKE) -C $(SRC_DIR)/note clean
 
 # Rebuild from scratch
 rebuild: clean all

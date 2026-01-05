@@ -6,6 +6,7 @@
 #include "nodes/nodes.h"
 #include "edges/edges.h"
 #include "tree/tree.h"
+#include "note/note.h"
 
 /**
  * Display help message
@@ -21,6 +22,7 @@ static void help(void) {
     printf("  nodes               Manage graph nodes\n");
     printf("  edges               Manage graph edges\n");
     printf("  tree                Display hierarchical tree structure\n");
+    printf("  note                Create new note scaffold\n");
     printf("\n");
     printf("Options:\n");
     printf("  -h, --help          Display this help and exit\n");
@@ -63,6 +65,10 @@ int main(int argc, char **argv) {
 
     if (strcmp(argv[1], "tree") == 0) {
         return tree(argc - 1, argv + 1);
+    }
+
+    if (strcmp(argv[1], "note") == 0) {
+        return note(argc - 1, argv + 1);
     }
 
     return 0;
