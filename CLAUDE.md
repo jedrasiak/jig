@@ -37,6 +37,9 @@ gcc -Wall -Wextra -Werror -I./src \
   src/nodes/nodes.c \
   src/edges/edges.c \
   src/tree/tree.c \
+  src/note/note.c \
+  src/uuid/uuid.c \
+  src/slugify/slugify.c \
   -o bin/jig
 ```
 
@@ -52,11 +55,14 @@ The codebase follows a modular architecture where each command is a self-contain
 ```
 src/
 ├── main.c              # CLI entry point and command routing
+├── note/               # Create note scaffolds with UUIDs
 ├── filter/             # Filter valid note files by frontmatter
 ├── find/               # Recursively find files in directory tree
 ├── nodes/              # Extract node information from files
 ├── edges/              # Build edges (relationships) between nodes
-└── tree/               # Display hierarchical tree visualization
+├── tree/               # Display hierarchical tree visualization
+├── uuid/               # UUID v7 generation utility
+└── slugify/            # Slug generation utility
 ```
 
 Each module contains:
@@ -96,39 +102,60 @@ jig find . -p '\.md$' | jig filter | jig nodes | jig edges
 - Routes to appropriate module function
 - Displays help message for unknown commands
 
-**2. filter** - File validation (`src/filter/`)
+**2. note** - Note creation (`src/note/`)
+- Creates directory with slugified title
+- Generates markdown file(s) with frontmatter
+- Supports multi-language notes with `-l` flag
+- Custom templates with placeholder replacement: `{{id}}`, `{{title}}`, `{{slug}}`
+- Each file receives unique UUID v7
+- Depends on uuid and slugify utilities
+
+**3. filter** - File validation (`src/filter/`)
 - Reads file paths from stdin or arguments
 - Validates YAML frontmatter structure
 - Requires `id` (max 36 bytes) and `title` fields
 - Outputs only valid file paths
 
-**3. find** - File discovery (`src/find/`)
+**4. find** - File discovery (`src/find/`)
 - Recursively traverses directories (max 100 levels)
 - Skips hidden files (starting with `.`)
 - Skips symbolic links
 - Optional regex pattern filtering with `-p/--pattern`
 - Outputs full file paths
 
-**4. nodes** - Node extraction (`src/nodes/`)
+**5. nodes** - Node extraction (`src/nodes/`)
 - Reads file paths from stdin
 - Parses YAML frontmatter for: `id`, `title`
 - Extracts parent link from markdown: `[text](path?label=parent)`
 - Outputs CSV: `id,title,path,link`
 - Uses regex patterns initialized with `init_node_parser()`
 
-**5. edges** - Relationship building (`src/edges/`)
+**6. edges** - Relationship building (`src/edges/`)
 - Reads node CSV from stdin
 - Matches parent links to build relationships
 - Outputs CSV: `src_id,src_title,dst_id,dst_title,label,src_path,dst_path`
 - Edge label is typically "parent"
 
-**6. tree** - Visualization (`src/tree/`)
+**7. tree** - Visualization (`src/tree/`)
 - Reads file paths from stdin
 - Parses files to extract nodes (using `build_nodes_from_stdin()`)
 - Builds edges internally from parent links (using `build_edges_from_nodes()`)
 - Renders ASCII tree with Unicode box-drawing characters
 - Displays parent-child relationships
 - Optional markdown format with `-f md` flag
+
+**8. uuid** - UUID generation utility (`src/uuid/`)
+- Generates UUID v7 (time-based)
+- Function: `char *uuid(int version)`
+- Returns allocated string (caller must free)
+- Used by note module for unique identifiers
+
+**9. slugify** - Slug generation utility (`src/slugify/`)
+- Converts strings to URL-friendly slugs
+- Function: `char *slugify(const char *input)`
+- Transforms: lowercase, replace spaces with hyphens, remove special chars
+- Returns allocated string (caller must free)
+- Used by note module for directory names
 
 ### Data Structures
 
@@ -232,8 +259,8 @@ No third-party libraries required (previously used cJSON, now removed).
 
 **File permissions:**
 - Standard Unix file operations
-- Read-only access to input files
-- No file modification or creation
+- Read-only access for analysis commands (filter, find, nodes, edges, tree)
+- Write access for creation commands (note creates directories and files)
 
 ## Unix Philosophy in Practice
 
@@ -247,6 +274,12 @@ Commands follow these principles:
 
 Example workflows:
 ```bash
+# Create a new note
+jig note "My New Note"
+
+# Create multi-language note
+jig note "Meeting Notes" -l "en,pl"
+
 # Count total nodes
 jig find . | jig filter | jig nodes | tail -n +2 | wc -l
 

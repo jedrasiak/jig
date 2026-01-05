@@ -28,6 +28,7 @@ jig find . -p '\.md$' | jig filter | jig tree
 
 **jig** provides these composable commands:
 
+- **jig-note** - Create note scaffold with directory and markdown files
 - **jig-find** - Recursively find files in directory tree
 - **jig-filter** - Validate note files by frontmatter criteria
 - **jig-nodes** - Extract node information from files
@@ -37,6 +38,19 @@ jig find . -p '\.md$' | jig filter | jig tree
 Each command can be invoked as `jig <command>` (subcommand mode) or `jig-<command>` (standalone mode).
 
 ## Usage
+
+### Creating Notes
+
+```bash
+# Create a simple note
+jig note "My New Note"
+
+# Create multi-language note
+jig note "Meeting Notes" -l "en,pl"
+
+# Use custom template
+jig note "Project Task" -t templates/task.md
+```
 
 ### Basic Workflow
 
@@ -195,6 +209,7 @@ make rebuild
 
 The build creates:
 - `bin/jig` - Main executable with all commands
+- `bin/jig-note` - Standalone note binary
 - `bin/jig-filter` - Standalone filter binary
 - `bin/jig-find` - Standalone find binary
 - `bin/jig-nodes` - Standalone nodes binary
@@ -215,6 +230,9 @@ gcc -Wall -Wextra -Werror -I./src \
   src/nodes/nodes.c \
   src/edges/edges.c \
   src/tree/tree.c \
+  src/note/note.c \
+  src/uuid/uuid.c \
+  src/slugify/slugify.c \
   -o bin/jig
 ```
 
@@ -222,6 +240,7 @@ gcc -Wall -Wextra -Werror -I./src \
 
 Each command has detailed documentation in man page format:
 
+- [jig-note(1)](src/note/README.md) - Create note scaffolds
 - [jig-find(1)](src/find/README.md) - Find files recursively
 - [jig-filter(1)](src/filter/README.md) - Filter valid notes
 - [jig-nodes(1)](src/nodes/README.md) - Extract nodes
@@ -236,11 +255,14 @@ Each command has detailed documentation in man page format:
 jig/
 ├── src/                # Source code organized by module
 │   ├── main.c          # CLI entry point and command routing
+│   ├── note/           # Note scaffold creation module
 │   ├── filter/         # Filter module
 │   ├── find/           # Find module
 │   ├── nodes/          # Nodes module
 │   ├── edges/          # Edges module
-│   └── tree/           # Tree module
+│   ├── tree/           # Tree module
+│   ├── uuid/           # UUID generation utility
+│   └── slugify/        # Slug generation utility
 ├── bin/                # Final executables (generated)
 │   ├── jig             # Main executable
 │   ├── jig-*           # Standalone module binaries
