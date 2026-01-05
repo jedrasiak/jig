@@ -45,7 +45,7 @@ static int process_directory(const char *path, int depth, regex_t *pattern) {
     int has_trailing_slash;
     int has_error = 0;
 
-    // Prevent infinite recursion from symlink loops
+    // Prevent infinite recursion
     if (depth > MAX_DEPTH) {
         fprintf(stderr, "Maximum directory depth exceeded: %s\n", path);
         return 1;
