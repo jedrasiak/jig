@@ -1,0 +1,7 @@
+/.*
+/bin
+/build
+/playground
+
+*.swp
+TODO.md
