@@ -4,6 +4,23 @@
 #define NOTE_MAX_ITEMS 64
 
 /**
+ * Link to another note
+ */
+typedef struct {
+    char *label;    /* Link label (e.g., "parent") */
+    char *path;     /* Resolved absolute path to target file */
+    char *title;    /* Title extracted from target note */
+} NoteLink;
+
+/**
+ * List of links for a note
+ */
+typedef struct {
+    NoteLink items[NOTE_MAX_ITEMS];
+    int count;
+} NoteLinkList;
+
+/**
  * Single note file to be created
  */
 typedef struct {
@@ -11,6 +28,7 @@ typedef struct {
     char *title;    /* Note title */
     char *slug;     /* Slugified title */
     char *id;       /* UUID v7 */
+    NoteLinkList links;
 } Note;
 
 /**
@@ -28,6 +46,11 @@ typedef struct {
     char *name;     /* Original folder name from argument */
     char *slug;     /* Slugified folder name (actual directory) */
 } NoteFolder;
+
+/**
+ * Free note link list memory
+ */
+void free_note_link_list(NoteLinkList *list);
 
 /**
  * Free note list memory

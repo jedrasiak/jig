@@ -6,13 +6,13 @@ CFLAGS = -Wall -Wextra -Werror -I. -I..
 TARGET = ../../bin/jig-note
 
 # Source files
-SOURCES = note.c note-cli.c ../uuid/uuid.c ../slugify/slugify.c
+SOURCES = note.c note-cli.c ../uuid/uuid.c ../slugify/slugify.c ../nodes/nodes.c
 
 # Default target
 all: $(TARGET)
 
 # Build the executable
-$(TARGET): $(SOURCES) note.h ../uuid/uuid.h ../slugify/slugify.h
+$(TARGET): $(SOURCES) note.h ../uuid/uuid.h ../slugify/slugify.h ../nodes/nodes.h
 	$(CC) $(CFLAGS) $(SOURCES) -o $(TARGET)
 	@echo "Built $(TARGET)"
 

@@ -4,7 +4,7 @@ title: {{title}}
 slug: {{slug}}
 draft: false
 links:
-- "[TARGET TITLE](/path?label=parent)"
+{{links}}
 ---
 
 # {{title}}
