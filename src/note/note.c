@@ -8,30 +8,37 @@
 #include "../uuid/uuid.h"
 #include "../slugify/slugify.h"
 
-#define MAX_LANGUAGES 64
+#define MAX_NAMES 64
 #define MAX_TEMPLATE_SIZE 10485760  /* 10MB */
+
+/**
+ * Language-title pair for multilingual notes
+ */
+typedef struct {
+    char *lang;
+    char *title;
+} LangTitle;
 
 /**
  * Display help message following Unix conventions
  */
 static void help(void) {
-    printf("Usage: jig note <TITLE> [OPTIONS]\n");
-    printf("       jig-note <TITLE> [OPTIONS]\n");
+    printf("Usage: jig note <NAME> [OPTIONS]\n");
     printf("\n");
     printf("Create note scaffold with directory and markdown file(s).\n");
     printf("\n");
     printf("Arguments:\n");
-    printf("  TITLE              Mandatory title for the note\n");
+    printf("  NAME               Folder name (slugified), also used as default title\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -h, --help         Display this help and exit\n");
-    printf("  -l, --lang LANGS   Comma-separated languages (creates index.LANG.md)\n");
-    printf("  -t, --template PATH Use custom template file\n");
+    printf("  -h, --help             Display this help and exit\n");
+    printf("  -n, --name LANG:TITLE  Language-specific title (can be repeated)\n");
+    printf("  -t, --template PATH    Use custom template file\n");
     printf("\n");
     printf("Template Placeholders:\n");
     printf("  {{id}}             Replaced with generated UUID v7\n");
     printf("  {{title}}          Replaced with provided title\n");
-    printf("  {{slug}}           Replaced with slugified title\n");
+    printf("  {{slug}}           Replaced with slugified title (per-language when using -n)\n");
     printf("\n");
     printf("Default template (if no -t flag):\n");
     printf("  ---\n");
@@ -41,8 +48,8 @@ static void help(void) {
     printf("  # {{title}}\n");
     printf("\n");
     printf("Examples:\n");
-    printf("  jig note \"My New Note\"\n");
-    printf("  jig note \"My Note\" -l \"en,pl\"\n");
+    printf("  jig note \"My Note\"\n");
+    printf("  jig note \"My Note\" -n \"en:My Note\" -n \"pl:Moja Notatka\"\n");
     printf("  jig note \"My Note\" -t template.md\n");
 }
 
@@ -171,55 +178,57 @@ static char *read_template_file(const char *filepath) {
 }
 
 /**
- * Parse comma-separated language list
- * Stores allocated strings in langs_out array
- * Returns count of languages parsed
+ * Parse LANG:TITLE string into LangTitle struct
+ * Returns 0 on success, 1 on error
  */
-static int parse_languages(const char *lang_str, char **langs_out, int max_langs) {
-    if (lang_str == NULL || langs_out == NULL) {
-        return 0;
+static int parse_lang_title(const char *str, LangTitle *out) {
+    if (str == NULL || out == NULL) {
+        return 1;
     }
 
-    /* Make a copy since strtok_r modifies the string */
-    char *copy = strdup(lang_str);
-    if (copy == NULL) {
+    /* Find first colon */
+    const char *colon = strchr(str, ':');
+    if (colon == NULL) {
+        fprintf(stderr, "Error: Invalid format '%s', expected LANG:TITLE\n", str);
+        return 1;
+    }
+
+    /* Extract language (before colon) */
+    size_t lang_len = colon - str;
+    if (lang_len == 0) {
+        fprintf(stderr, "Error: Empty language in '%s'\n", str);
+        return 1;
+    }
+
+    out->lang = malloc(lang_len + 1);
+    if (out->lang == NULL) {
         fprintf(stderr, "Error: Memory allocation failed\n");
-        return 0;
+        return 1;
+    }
+    memcpy(out->lang, str, lang_len);
+    out->lang[lang_len] = '\0';
+
+    /* Extract title (after colon) */
+    const char *title_start = colon + 1;
+    size_t title_len = strlen(title_start);
+    if (title_len == 0) {
+        fprintf(stderr, "Error: Empty title in '%s'\n", str);
+        free(out->lang);
+        out->lang = NULL;
+        return 1;
     }
 
-    int count = 0;
-    char *saveptr;
-    char *token = strtok_r(copy, ",", &saveptr);
-
-    while (token != NULL && count < max_langs) {
-        /* Trim leading/trailing whitespace */
-        while (*token == ' ' || *token == '\t') {
-            token++;
-        }
-
-        size_t len = strlen(token);
-        while (len > 0 && (token[len-1] == ' ' || token[len-1] == '\t')) {
-            len--;
-        }
-
-        if (len > 0) {
-            /* Allocate and copy language string */
-            langs_out[count] = malloc(len + 1);
-            if (langs_out[count] == NULL) {
-                fprintf(stderr, "Error: Memory allocation failed\n");
-                free(copy);
-                return count;
-            }
-            memcpy(langs_out[count], token, len);
-            langs_out[count][len] = '\0';
-            count++;
-        }
-
-        token = strtok_r(NULL, ",", &saveptr);
+    out->title = malloc(title_len + 1);
+    if (out->title == NULL) {
+        fprintf(stderr, "Error: Memory allocation failed\n");
+        free(out->lang);
+        out->lang = NULL;
+        return 1;
     }
+    memcpy(out->title, title_start, title_len);
+    out->title[title_len] = '\0';
 
-    free(copy);
-    return count;
+    return 0;
 }
 
 /**
@@ -252,11 +261,12 @@ static int create_file(const char *filepath, const char *content) {
 }
 
 /**
- * Free language string array
+ * Free LangTitle array
  */
-static void cleanup_languages(char **langs, int count) {
+static void cleanup_names(LangTitle *names, int count) {
     for (int i = 0; i < count; i++) {
-        free(langs[i]);
+        free(names[i].lang);
+        free(names[i].title);
     }
 }
 
@@ -264,12 +274,10 @@ static void cleanup_languages(char **langs, int count) {
  * Main entry point for note command
  */
 int note(int argc, char **argv) {
-    char *title = NULL;
-    char *lang_str = NULL;
+    char *folder_name = NULL;
     char *template_path = NULL;
-    char *langs[MAX_LANGUAGES];
-    int lang_count = 0;
-    int result = 0;
+    LangTitle names[MAX_NAMES];
+    int name_count = 0;
 
     /* Parse arguments */
     for (int i = 1; i < argc; i++) {
@@ -277,27 +285,31 @@ int note(int argc, char **argv) {
             help();
             return 0;
         }
-        else if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--lang") == 0) {
-            if (i + 1 < argc) {
-                lang_str = argv[i + 1];
-                i++;
-            } else {
-                fprintf(stderr, "Error: -l/--lang requires a language list\n");
+        else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--name") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "Error: -n/--name requires LANG:TITLE argument\n");
                 return 1;
             }
+            if (name_count >= MAX_NAMES) {
+                fprintf(stderr, "Error: Too many -n/--name arguments (max %d)\n", MAX_NAMES);
+                return 1;
+            }
+            if (parse_lang_title(argv[i + 1], &names[name_count]) != 0) {
+                return 1;
+            }
+            name_count++;
+            i++;
         }
         else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--template") == 0) {
-            if (i + 1 < argc) {
-                template_path = argv[i + 1];
-                i++;
-            } else {
+            if (i + 1 >= argc) {
                 fprintf(stderr, "Error: -t/--template requires a file path\n");
                 return 1;
             }
+            template_path = argv[i + 1];
+            i++;
         }
         else if (argv[i][0] != '-') {
-            /* Positional argument is the title */
-            title = argv[i];
+            folder_name = argv[i];
         }
         else {
             fprintf(stderr, "Error: Unknown option: %s\n", argv[i]);
@@ -306,16 +318,18 @@ int note(int argc, char **argv) {
         }
     }
 
-    /* Validate title */
-    if (title == NULL) {
-        fprintf(stderr, "Error: TITLE is required\n");
+    /* Validate folder name */
+    if (folder_name == NULL) {
+        fprintf(stderr, "Error: Folder name is required\n");
         help();
+        cleanup_names(names, name_count);
         return 1;
     }
 
-    /* Generate slug */
-    char *slug = slugify(title);
+    /* Generate slug from folder name */
+    char *slug = slugify(folder_name);
     if (slug == NULL) {
+        cleanup_names(names, name_count);
         return 1;
     }
 
@@ -324,6 +338,7 @@ int note(int argc, char **argv) {
     if (stat(slug, &st) == 0) {
         fprintf(stderr, "Error: Directory '%s' already exists\n", slug);
         free(slug);
+        cleanup_names(names, name_count);
         return 1;
     }
 
@@ -331,6 +346,7 @@ int note(int argc, char **argv) {
     if (mkdir(slug, 0755) != 0) {
         fprintf(stderr, "Error: Failed to create directory '%s'\n", slug);
         free(slug);
+        cleanup_names(names, name_count);
         return 1;
     }
 
@@ -338,59 +354,49 @@ int note(int argc, char **argv) {
     char *template_raw = NULL;
     if (template_path != NULL) {
         template_raw = read_template_file(template_path);
-        if (template_raw == NULL) {
-            free(slug);
-            return 1;
-        }
     } else {
         template_raw = get_default_template();
-        if (template_raw == NULL) {
-            free(slug);
-            return 1;
-        }
     }
-
-    /* Replace {{title}} and {{slug}} placeholders (keep {{id}} for per-file replacement) */
-    char *template_with_title = replace_placeholder(template_raw, "{{title}}", title);
-    free(template_raw);
-    if (template_with_title == NULL) {
+    if (template_raw == NULL) {
         free(slug);
+        cleanup_names(names, name_count);
         return 1;
     }
 
-    char *template_base = replace_placeholder(template_with_title, "{{slug}}", slug);
-    free(template_with_title);
-    if (template_base == NULL) {
-        free(slug);
-        return 1;
-    }
-
-    /* Parse languages if provided */
-    if (lang_str != NULL) {
-        lang_count = parse_languages(lang_str, langs, MAX_LANGUAGES);
-        if (lang_count == 0) {
-            fprintf(stderr, "Error: No valid languages parsed\n");
-            free(slug);
-            free(template_base);
-            return 1;
-        }
-    }
+    int result = 0;
 
     /* Create files */
-    if (lang_count == 0) {
-        /* No languages: create single index.md with one UUID */
-        char *uuid_str = uuid(7);
-        if (uuid_str == NULL) {
+    if (name_count == 0) {
+        /* No -n flags: create single index.md using folder_name as title and slug */
+        char *template_with_slug = replace_placeholder(template_raw, "{{slug}}", slug);
+        if (template_with_slug == NULL) {
+            free(template_raw);
             free(slug);
-            free(template_base);
             return 1;
         }
 
-        char *final_content = replace_placeholder(template_base, "{{id}}", uuid_str);
+        char *template_with_title = replace_placeholder(template_with_slug, "{{title}}", folder_name);
+        free(template_with_slug);
+        if (template_with_title == NULL) {
+            free(template_raw);
+            free(slug);
+            return 1;
+        }
+
+        char *uuid_str = uuid(7);
+        if (uuid_str == NULL) {
+            free(template_with_title);
+            free(template_raw);
+            free(slug);
+            return 1;
+        }
+
+        char *final_content = replace_placeholder(template_with_title, "{{id}}", uuid_str);
+        free(template_with_title);
         free(uuid_str);
         if (final_content == NULL) {
+            free(template_raw);
             free(slug);
-            free(template_base);
             return 1;
         }
 
@@ -399,26 +405,45 @@ int note(int argc, char **argv) {
         result = create_file(filepath, final_content);
         free(final_content);
     } else {
-        /* Create index.LANG.md for each language with unique UUID per file */
-        for (int i = 0; i < lang_count; i++) {
-            /* Generate unique UUID for this file */
-            char *uuid_str = uuid(7);
-            if (uuid_str == NULL) {
+        /* Create index.LANG.md for each -n entry with its own slug */
+        for (int i = 0; i < name_count; i++) {
+            char *title_slug = slugify(names[i].title);
+            if (title_slug == NULL) {
                 result = 1;
                 break;
             }
 
-            /* Replace {{id}} with this file's UUID */
-            char *final_content = replace_placeholder(template_base, "{{id}}", uuid_str);
+            char *template_with_slug = replace_placeholder(template_raw, "{{slug}}", title_slug);
+            free(title_slug);
+            if (template_with_slug == NULL) {
+                result = 1;
+                break;
+            }
+
+            char *template_with_title = replace_placeholder(template_with_slug, "{{title}}", names[i].title);
+            free(template_with_slug);
+            if (template_with_title == NULL) {
+                result = 1;
+                break;
+            }
+
+            char *uuid_str = uuid(7);
+            if (uuid_str == NULL) {
+                free(template_with_title);
+                result = 1;
+                break;
+            }
+
+            char *final_content = replace_placeholder(template_with_title, "{{id}}", uuid_str);
+            free(template_with_title);
             free(uuid_str);
             if (final_content == NULL) {
                 result = 1;
                 break;
             }
 
-            /* Create the file */
             char filepath[PATH_MAX];
-            snprintf(filepath, PATH_MAX, "%s/index.%s.md", slug, langs[i]);
+            snprintf(filepath, PATH_MAX, "%s/index.%s.md", slug, names[i].lang);
             if (create_file(filepath, final_content) != 0) {
                 free(final_content);
                 result = 1;
@@ -430,8 +455,8 @@ int note(int argc, char **argv) {
 
     /* Cleanup */
     free(slug);
-    free(template_base);
-    cleanup_languages(langs, lang_count);
+    free(template_raw);
+    cleanup_names(names, name_count);
 
     return result;
 }
