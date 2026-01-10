@@ -47,8 +47,8 @@ char *slugify(const char *input) {
             // Keep alphanumeric
             buffer[write_pos++] = c;
             prev_hyphen = 0;
-        } else if (c == ' ') {
-            // Space → hyphen (but collapse multiple)
+        } else if (c == ' ' || c == '-') {
+            // Space or hyphen → hyphen (but collapse multiple)
             if (!prev_hyphen && write_pos > 0) {
                 buffer[write_pos++] = '-';
                 prev_hyphen = 1;

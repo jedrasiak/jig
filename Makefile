@@ -1,6 +1,7 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -I./src
+VERSION = $(shell cat VERSION)
+CFLAGS = -Wall -Wextra -Werror -I./src -DVERSION=\"$(VERSION)\"
 LDFLAGS =
 
 # Directories

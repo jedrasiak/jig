@@ -2,6 +2,7 @@
 /bin
 /build
 /playground
+/release
 
 *.swp
 TODO.md

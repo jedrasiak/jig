@@ -26,6 +26,7 @@ static void help(void) {
     printf("\n");
     printf("Options:\n");
     printf("  -h, --help          Display this help and exit\n");
+    printf("  -v, --version       Display version information and exit\n");
     printf("\n");
     printf("Examples:\n");
     printf("  jig find . -p \"\\.md$\" | jig filter | jig tree\n");
@@ -44,6 +45,12 @@ int main(int argc, char **argv) {
     // Check for help flag
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
         help();
+        return 0;
+    }
+
+    // Check for version flag
+    if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0) {
+        printf("jig %s\n", VERSION);
         return 0;
     }
 
