@@ -30,8 +30,6 @@ static void help(void) {
     printf("\n");
     printf("Examples:\n");
     printf("  jig find . -p \"\\.md$\" | jig filter | jig tree\n");
-    printf("  jig nodes\n");
-    printf("  jig edges\n");
 }
 
 int main(int argc, char **argv) {

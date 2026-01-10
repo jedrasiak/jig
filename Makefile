@@ -62,6 +62,8 @@ clean-modules:
 	@$(MAKE) -C $(SRC_DIR)/edges clean
 	@$(MAKE) -C $(SRC_DIR)/tree clean
 	@$(MAKE) -C $(SRC_DIR)/note clean
+	@$(MAKE) -C $(SRC_DIR)/slugify clean
+	@$(MAKE) -C $(SRC_DIR)/uuid clean
 
 # Rebuild from scratch
 rebuild: clean all
