@@ -5,7 +5,9 @@
 #include "config.h"
 
 static void help(void);
-static void parse(const char *filepath);
+static Settings parse(void);
+static void print(Settings *settings);
+static char *trim(char *str);
 
 int config(int argc, char **argv) {
     // Parse arguments
@@ -13,11 +15,13 @@ int config(int argc, char **argv) {
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             help();
             return 0;
-        } else {
-            parse(argv[i]);
-            return 0;
         }
     }
+
+    // Default: parse config file
+    Settings settings = parse();
+    print(&settings);
+    free(settings.providers.items);
     return 0;
 }
 
@@ -27,17 +31,35 @@ static void help(void) {
     printf("\n");
 }
 
-static void parse(const char *filepath) {
-    printf("Parsing config file: %s\n", filepath);
+static char *trim(char *str) {
+    // Trim leading whitespace
+    while (*str == ' ' || *str == '\t') str++;
 
-    FILE *fptr = fopen(filepath, "r");
+    // Trim trailing whitespace
+    char *end = str + strlen(str) - 1;
+    while (end > str && (*end == ' ' || *end == '\t')) {
+        *end = '\0';
+        end--;
+    }
+
+    return str;
+}
+
+static Settings parse(void) {
+    Settings settings = {0};
+    settings.providers.items = malloc(sizeof(Provider) * MAX_PROVIDERS);
+    settings.providers.count = 0;
+
+    FILE *fptr = fopen("./jig.conf", "r");
     if (fptr == NULL) {
-        fprintf(stderr, "Error: Unable to open config file %s\n", filepath);
-        return;
+        fprintf(stderr, "Error: Unable to open config file.\n");
+        fprintf(stderr, "Ensure you are in the project root directory and run 'jig init'.\n");
+        return settings;
     }
 
     char line[MAX_LINE];
     char section[MAX_KEY] = "";
+    Provider *current_provider = NULL;
 
     while (fgets(line, sizeof(line), fptr)) {
         // Trim newline
@@ -56,6 +78,18 @@ static void parse(const char *filepath) {
                 strncpy(section, line + 1, len);
                 section[len] = '\0';
             }
+
+            // Check if this is a provider section (e.g., [provider.mistral])
+            if (strncmp(section, "provider.", 9) == 0) {
+                if (settings.providers.count < MAX_PROVIDERS) {
+                    current_provider = &settings.providers.items[settings.providers.count];
+                    memset(current_provider, 0, sizeof(Provider));
+                    strncpy(current_provider->name, section + 9, MAX_NAME - 1);
+                    settings.providers.count++;
+                }
+            } else {
+                current_provider = NULL;
+            }
             continue;
         }
 
@@ -63,16 +97,29 @@ static void parse(const char *filepath) {
         char *equals = strchr(line, '=');
         if (equals) {
             *equals = '\0';
-            char *key = line;
-            char *value = equals + 1;
+            char *key = trim(line);
+            char *value = trim(equals + 1);
 
-            // Trim whitespace
-            while (*key == ' ') key++;
-            while (*value == ' ') value++;
-
-            printf("Section: [%s] Key: '%s' Value: '%s'\n", section, key, value);
+            // Store values in current provider
+            if (current_provider != NULL) {
+                if (strcmp(key, "key") == 0) {
+                    strncpy(current_provider->key, value, MAX_KEY - 1);
+                } else if (strcmp(key, "endpoint") == 0) {
+                    strncpy(current_provider->endpoint, value, MAX_ENDPOINT - 1);
+                }
+            }
         }
     }
 
     fclose(fptr);
+    return settings;
+}
+
+static void print(Settings *settings) {
+    for (int i = 0; i < settings->providers.count; i++) {
+        Provider *p = &settings->providers.items[i];
+        printf("[provider.%s]\n", p->name);
+        printf("key:      %s\n", p->key);
+        printf("endpoint: %s\n", p->endpoint);
+    }
 }
