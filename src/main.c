@@ -4,6 +4,7 @@
 #include "config/config.h"
 #include "filter/filter.h"
 #include "find/find.h"
+#include "init/init.h"
 #include "nodes/nodes.h"
 #include "edges/edges.h"
 #include "tree/tree.h"
@@ -20,6 +21,7 @@ static void help(void) {
     printf("Commands:\n");
     printf("  config              Display parsed configuration\n");
     printf("  find                Find files in the graph\n");
+    printf("  init                Initialize configuration file\n");
     printf("  filter              Filter and parse markdown files\n");
     printf("  nodes               Manage graph nodes\n");
     printf("  edges               Manage graph edges\n");
@@ -64,6 +66,10 @@ int main(int argc, char **argv) {
 
     if (strcmp(argv[1], "find") == 0) {
         return find(argc - 1, argv + 1);
+    }
+
+    if (strcmp(argv[1], "init") == 0) {
+        return init(argc - 1, argv + 1);
     }
 
     if (strcmp(argv[1], "nodes") == 0) {

@@ -29,6 +29,7 @@ jig find . -p '\.md$' | jig filter | jig tree
 **jig** provides these composable commands:
 
 - **jig-config** - Parse and display configuration from jig.conf
+- **jig-init** - Initialize a jig configuration file
 - **jig-note** - Create note scaffold with directory and markdown files
 - **jig-find** - Recursively find files in directory tree
 - **jig-filter** - Validate note files by frontmatter criteria
@@ -39,6 +40,25 @@ jig find . -p '\.md$' | jig filter | jig tree
 Each command can be invoked as `jig <command>` (subcommand mode) or `jig-<command>` (standalone mode).
 
 ## Usage
+
+### Initializing a Project
+
+Run `jig init` in your project root directory to create a configuration file:
+
+```bash
+cd your-project
+jig init
+```
+
+This creates `jig.conf` with default settings. Edit the file to add your API credentials:
+
+```ini
+[provider.mistral]
+key = your-api-key-here
+endpoint = https://api.mistral.ai/v1
+```
+
+Fill in the missing properties to enable all features like OCR processing.
 
 ### Creating Notes
 
@@ -211,6 +231,7 @@ make rebuild
 The build creates:
 - `bin/jig` - Main executable with all commands
 - `bin/jig-config` - Standalone config binary
+- `bin/jig-init` - Standalone init binary
 - `bin/jig-note` - Standalone note binary
 - `bin/jig-filter` - Standalone filter binary
 - `bin/jig-find` - Standalone find binary
@@ -230,6 +251,7 @@ gcc -Wall -Wextra -Werror -I./src \
   src/config/config.c \
   src/filter/filter.c \
   src/find/find.c \
+  src/init/init.c \
   src/nodes/nodes.c \
   src/edges/edges.c \
   src/tree/tree.c \
@@ -244,6 +266,7 @@ gcc -Wall -Wextra -Werror -I./src \
 Each command has detailed documentation in man page format:
 
 - [jig-config(1)](src/config/README.md) - Parse configuration
+- [jig-init(1)](src/init/README.md) - Initialize configuration file
 - [jig-note(1)](src/note/README.md) - Create note scaffolds
 - [jig-find(1)](src/find/README.md) - Find files recursively
 - [jig-filter(1)](src/filter/README.md) - Filter valid notes
@@ -260,6 +283,7 @@ jig/
 ├── src/                # Source code organized by module
 │   ├── main.c          # CLI entry point and command routing
 │   ├── config/         # Configuration parsing module
+│   ├── init/           # Configuration initialization module
 │   ├── note/           # Note scaffold creation module
 │   ├── filter/         # Filter module
 │   ├── find/           # Find module
