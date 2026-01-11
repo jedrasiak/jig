@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "config/config.h"
 #include "filter/filter.h"
 #include "find/find.h"
 #include "nodes/nodes.h"
@@ -17,6 +18,7 @@ static void help(void) {
     printf("Knowledge graph management tool for organizing multi-lingual content.\n");
     printf("\n");
     printf("Commands:\n");
+    printf("  config              Display parsed configuration\n");
     printf("  find                Find files in the graph\n");
     printf("  filter              Filter and parse markdown files\n");
     printf("  nodes               Manage graph nodes\n");
@@ -50,6 +52,10 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0) {
         printf("jig %s\n", VERSION);
         return 0;
+    }
+
+    if (strcmp(argv[1], "config") == 0) {
+        return config(argc - 1, argv + 1);
     }
 
     if (strcmp(argv[1], "filter") == 0) {
