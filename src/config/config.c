@@ -5,7 +5,6 @@
 #include "config.h"
 
 static void help(void);
-static Settings parse(void);
 static void print(Settings *settings);
 static char *trim(char *str);
 
@@ -19,9 +18,9 @@ int config(int argc, char **argv) {
     }
 
     // Default: parse config file
-    Settings settings = parse();
+    Settings settings = load_config();
     print(&settings);
-    free(settings.providers.items);
+    free_settings(&settings);
     return 0;
 }
 
@@ -45,7 +44,7 @@ static char *trim(char *str) {
     return str;
 }
 
-static Settings parse(void) {
+Settings load_config(void) {
     Settings settings = {0};
     settings.providers.items = malloc(sizeof(Provider) * MAX_PROVIDERS);
     settings.providers.count = 0;
@@ -122,4 +121,21 @@ static void print(Settings *settings) {
         printf("key:      %s\n", p->key);
         printf("endpoint: %s\n", p->endpoint);
     }
+}
+
+void free_settings(Settings *settings) {
+    if (settings->providers.items) {
+        free(settings->providers.items);
+        settings->providers.items = NULL;
+    }
+    settings->providers.count = 0;
+}
+
+Provider *find_provider(Settings *settings, const char *name) {
+    for (int i = 0; i < settings->providers.count; i++) {
+        if (strcmp(settings->providers.items[i].name, name) == 0) {
+            return &settings->providers.items[i];
+        }
+    }
+    return NULL;
 }

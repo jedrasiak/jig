@@ -24,4 +24,8 @@ typedef struct {
 
 int config(int argc, char **argv);
 
+Settings load_config(void);
+void free_settings(Settings *settings);
+Provider *find_provider(Settings *settings, const char *name);
+
 #endif /* CONFIG_H */

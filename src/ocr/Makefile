@@ -6,7 +6,7 @@ CFLAGS = -Wall -Wextra -Werror -I. -I..
 TARGET = ../../bin/jig-ocr
 
 # Source files
-SOURCES = ocr.c ocr-cli.c
+SOURCES = ocr.c ocr-cli.c ../config/config.c
 
 # Default target
 all: $(TARGET)
