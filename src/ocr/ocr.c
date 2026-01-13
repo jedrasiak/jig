@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
+#include <stdlib.h>
 
 #include "ocr.h"
 #include "config/config.h"
@@ -8,6 +10,7 @@ static void help(void);
 
 int ocr(int argc, char **argv) {
     char arg_provider[MAX_NAME] = "mistral";  // Default provider
+    char filepath[PATH_MAX] = "";
     Provider *provider = NULL;
 
     // Load config first
@@ -31,11 +34,27 @@ int ocr(int argc, char **argv) {
                 free_settings(&settings);
                 return 1;
             }
+        } else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--file") == 0) {
+            if (i + 1 < argc) {
+                strncpy(filepath, argv[i + 1], PATH_MAX - 1);
+                i++;  // Skip next arg since we consumed it
+            } else {
+                fprintf(stderr, "Error: -f/--file requires a value\n");
+                free_settings(&settings);
+                return 1;
+            }
         } else {
             fprintf(stderr, "Error: Unknown argument: %s\n", argv[i]);
             free_settings(&settings);
             return 1;
         }
+    }
+
+    // filepath must be provided
+    if (strlen(filepath) == 0) {
+        help();
+        free_settings(&settings);
+        return 1;
     }
 
     // Check if provider is available in config
@@ -48,6 +67,8 @@ int ocr(int argc, char **argv) {
 
     if (strcmp(provider->name, "mistral") == 0) {
         printf("Using Mistral OCR provider\n");
+        printf("Processing file: %s\n", filepath);
+
         free_settings(&settings);
         return 0;
     } else {
@@ -59,12 +80,13 @@ int ocr(int argc, char **argv) {
 
 /* --- */
 static void help(void) {
-    printf("Usage: jig ocr [OPTIONS]\n");
+    printf("Usage: jig ocr -f FILE [-p NAME] [-h]\n");
     printf("\n");
     printf("Perform OCR on the specified input.\n");
     printf("\n");
     printf("OPTIONS:\n");
-    printf("  -p, --provider NAME  Specify OCR provider to use\n");
+    printf("  -f, --file FILE      Specify the file to process (required)\n");
+    printf("  -p, --provider NAME  Specify OCR provider to use (default: mistral)\n");
     printf("  -h, --help           Display this help message\n");
     printf("\n");
 }
