@@ -53,6 +53,8 @@ Settings load_config(void) {
     if (fptr == NULL) {
         fprintf(stderr, "Error: Unable to open config file.\n");
         fprintf(stderr, "Ensure you are in the project root directory and run 'jig init'.\n");
+        free(settings.providers.items);
+        settings.providers.items = NULL;
         return settings;
     }
 
