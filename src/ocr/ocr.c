@@ -52,13 +52,6 @@ int ocr(int argc, char **argv) {
         }
     }
 
-    // filepath must be provided
-    if (strlen(filepath) == 0) {
-        help();
-        free_settings(&settings);
-        return 1;
-    }
-
     // Check if provider is available in config
     provider = find_provider(&settings, arg_provider);
     if (provider == NULL) {
@@ -67,45 +60,55 @@ int ocr(int argc, char **argv) {
         return 1;
     }
 
+    // Check filepath provided
+    if (strlen(filepath) == 0) {
+        fprintf(stderr, "Error: No input file specified.\n");
+        help();
+        free_settings(&settings);
+        return 1;
+    }
+
+    // Open file
+    file = fopen(filepath, "rb");
+    if (file == NULL) {
+        fprintf(stderr, "Error: Could not open file '%s'\n", filepath);
+        free_settings(&settings);
+        return 1;
+    }
+
+    // check extension
+    int extension_allowed = 0;
+    const char *ext = strrchr(filepath, '.');
+
+    for (size_t i = 0; i < sizeof(extensions) / sizeof(extensions[0]); i++) {
+        if (ext != NULL && strcmp(ext + 1, extensions[i]) == 0) {
+            extension_allowed = 1;
+            break;
+        }
+    }
+
+    if (!extension_allowed) {
+        fprintf(stderr, "Error: Unsupported file extension.\n");
+        help();
+        free_settings(&settings);
+        fclose(file);
+        return 1;
+    }
+
     if (strcmp(provider->name, "mistral") == 0) {
-        // Open file
-        file = fopen(filepath, "rb");
-        if (file == NULL) {
-            fprintf(stderr, "Error: Could not open file '%s'\n", filepath);
-            free_settings(&settings);
-            return 1;
-        }
-
-        // check extension
-        int extension_allowed = 0;
-        const char *ext = strrchr(filepath, '.');
-
-        for (size_t i = 0; i < sizeof(extensions) / sizeof(extensions[0]); i++) {
-            if (ext != NULL && strcmp(ext + 1, extensions[i]) == 0) {
-                extension_allowed = 1;
-                break;
-            }
-        }
-
-        if (!extension_allowed) {
-            fprintf(stderr, "Error: Unsupported file extension. Supported: ");
-            help();
-            fclose(file);
-            free_settings(&settings);
-            return 1;
-        }
-
         // processing
         printf("Using Mistral OCR provider\n");
 
         // cleanup
         printf("OCR processing completed for file: %s\n", filepath);
-        fclose(file);
         free_settings(&settings);
+        fclose(file);
         return 0;
     } else {
         fprintf(stderr, "Error: Unsupported provider '%s'\n", provider->name);
+        help();
         free_settings(&settings);
+        fclose(file);
         return 1;
     }
 }
@@ -124,4 +127,6 @@ static void help(void) {
     printf("SUPPORTED FILES:\n");
     printf("  pdf\n");
     printf("\n");
+    printf("SUPPORTED PROVIDERS:\n");
+    printf("  mistral\n");
 }
