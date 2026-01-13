@@ -12,7 +12,7 @@ int ocr(int argc, char **argv) {
     char arg_provider[MAX_NAME] = "mistral";  // Default provider
     char filepath[PATH_MAX] = "";
     FILE *file = NULL;
-    char *extensions[] = {"pdf", "conf"};
+    char *extensions[] = {"pdf"};
     Provider *provider = NULL;
 
     // Load config first
@@ -89,13 +89,7 @@ int ocr(int argc, char **argv) {
 
         if (!extension_allowed) {
             fprintf(stderr, "Error: Unsupported file extension. Supported: ");
-            for (size_t i = 0; i < sizeof(extensions) / sizeof(extensions[0]); i++) {
-                fprintf(stderr, "%s", extensions[i]);
-                if (i < sizeof(extensions) / sizeof(extensions[0]) - 1) {
-                    fprintf(stderr, ", ");
-                }
-            }
-            fprintf(stderr, "\n");
+            help();
             fclose(file);
             free_settings(&settings);
             return 1;
@@ -126,5 +120,8 @@ static void help(void) {
     printf("  -f, --file FILE      Specify the file to process (required)\n");
     printf("  -p, --provider NAME  Specify OCR provider to use (default: mistral)\n");
     printf("  -h, --help           Display this help message\n");
+    printf("\n");
+    printf("SUPPORTED FILES:\n");
+    printf("  pdf\n");
     printf("\n");
 }
