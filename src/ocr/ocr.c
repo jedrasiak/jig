@@ -12,11 +12,20 @@ static void help(void);
 int ocr(int argc, char **argv) {
     char arg_provider[MAX_NAME] = "mistral";  // Default provider
     char filepath[PATH_MAX] = "";
+    char output_path[PATH_MAX] = "";
     FILE *file = NULL;
     char *extensions[] = {"pdf"};
     Provider *provider = NULL;
 
-    // Load config first
+    // Check for help flag first (before loading config)
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            help();
+            return 0;
+        }
+    }
+
+    // Load config
     Settings settings = load_config();
     if (settings.providers.items == NULL) {
         return 1;
@@ -24,11 +33,7 @@ int ocr(int argc, char **argv) {
 
     // Parse arguments
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            help();
-            free_settings(&settings);
-            return 0;
-        } else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--provider") == 0) {
+        if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--provider") == 0) {
             if (i + 1 < argc) {
                 strncpy(arg_provider, argv[i + 1], MAX_NAME - 1);
                 i++;  // Skip next arg since we consumed it
@@ -43,6 +48,15 @@ int ocr(int argc, char **argv) {
                 i++;  // Skip next arg since we consumed it
             } else {
                 fprintf(stderr, "Error: -f/--file requires a value\n");
+                free_settings(&settings);
+                return 1;
+            }
+        } else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
+            if (i + 1 < argc) {
+                strncpy(output_path, argv[i + 1], PATH_MAX - 1);
+                i++;  // Skip next arg since we consumed it
+            } else {
+                fprintf(stderr, "Error: -o/--output requires a value\n");
                 free_settings(&settings);
                 return 1;
             }
@@ -112,11 +126,42 @@ int ocr(int argc, char **argv) {
             return 1;
         }
 
+        // Get the directory of the source file for saving images
+        char source_dir[PATH_MAX];
+        strncpy(source_dir, filepath, PATH_MAX - 1);
+        char *last_slash = strrchr(source_dir, '/');
+        if (last_slash) {
+            *last_slash = '\0';
+        } else {
+            strcpy(source_dir, ".");
+        }
+
         MistralOcrResult result;
         int ret = mistral_process(filepath, provider->key, &result);
 
         if (ret == 0 && result.success) {
-            printf("%s\n", result.ocr_result);
+            char *markdown = NULL;
+            ret = mistral_extract_content(result.ocr_result, source_dir, &markdown);
+
+            if (ret == 0 && markdown) {
+                if (strlen(output_path) > 0) {
+                    FILE *out = fopen(output_path, "w");
+                    if (out) {
+                        fprintf(out, "%s", markdown);
+                        fclose(out);
+                        fprintf(stderr, "Output saved to: %s\n", output_path);
+                    } else {
+                        fprintf(stderr, "Error: Could not write to '%s'\n", output_path);
+                        ret = -1;
+                    }
+                } else {
+                    printf("%s", markdown);
+                }
+                free(markdown);
+            } else {
+                fprintf(stderr, "Error: Failed to process OCR result\n");
+                ret = -1;
+            }
         } else {
             fprintf(stderr, "Error: OCR processing failed");
             if (result.error) {
@@ -140,12 +185,13 @@ int ocr(int argc, char **argv) {
 
 /* --- */
 static void help(void) {
-    printf("Usage: jig ocr -f FILE [-p NAME] [-h]\n");
+    printf("Usage: jig ocr -f FILE [-o OUTPUT] [-p NAME] [-h]\n");
     printf("\n");
     printf("Perform OCR on the specified input.\n");
     printf("\n");
     printf("OPTIONS:\n");
     printf("  -f, --file FILE      Specify the file to process (required)\n");
+    printf("  -o, --output FILE    Save output to file (default: stdout)\n");
     printf("  -p, --provider NAME  Specify OCR provider to use (default: mistral)\n");
     printf("  -h, --help           Display this help message\n");
     printf("\n");

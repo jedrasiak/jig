@@ -1,10 +1,66 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include <curl/curl.h>
 
 #include "mistral.h"
 #include "../../vendor/cjson/cJSON.h"
+
+/* --- Base64 decoding --- */
+
+static const unsigned char base64_table[256] = {
+    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 62, 64, 64, 64, 63,
+    52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 64, 64, 64, 64, 64, 64,
+    64,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
+    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 64, 64, 64, 64, 64,
+    64, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+    41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
+};
+
+static unsigned char *base64_decode(const char *src, size_t len, size_t *out_len) {
+    size_t i, j;
+    unsigned char *out;
+    size_t pad = 0;
+
+    if (len == 0) {
+        *out_len = 0;
+        return NULL;
+    }
+
+    if (src[len - 1] == '=') pad++;
+    if (len > 1 && src[len - 2] == '=') pad++;
+
+    *out_len = (len / 4) * 3 - pad;
+    out = malloc(*out_len + 1);
+    if (!out) return NULL;
+
+    for (i = 0, j = 0; i < len; ) {
+        unsigned int a = src[i] == '=' ? 0 : base64_table[(unsigned char)src[i]]; i++;
+        unsigned int b = src[i] == '=' ? 0 : base64_table[(unsigned char)src[i]]; i++;
+        unsigned int c = src[i] == '=' ? 0 : base64_table[(unsigned char)src[i]]; i++;
+        unsigned int d = src[i] == '=' ? 0 : base64_table[(unsigned char)src[i]]; i++;
+
+        unsigned int triple = (a << 18) + (b << 12) + (c << 6) + d;
+
+        if (j < *out_len) out[j++] = (triple >> 16) & 0xFF;
+        if (j < *out_len) out[j++] = (triple >> 8) & 0xFF;
+        if (j < *out_len) out[j++] = triple & 0xFF;
+    }
+
+    out[*out_len] = '\0';
+    return out;
+}
 
 /* --- Response buffer handling --- */
 
@@ -360,4 +416,119 @@ void mistral_free_result(MistralOcrResult *result) {
         free(result->error);
         result->error = NULL;
     }
+}
+
+static int save_base64_image(const char *base64_data, const char *output_dir, const char *filename) {
+    // Skip data URL prefix if present (e.g., "data:image/jpeg;base64,")
+    const char *base64_start = strstr(base64_data, "base64,");
+    if (base64_start) {
+        base64_start += 7;  // Skip "base64,"
+    } else {
+        base64_start = base64_data;
+    }
+
+    size_t decoded_len;
+    unsigned char *decoded = base64_decode(base64_start, strlen(base64_start), &decoded_len);
+    if (!decoded) {
+        fprintf(stderr, "Error: Failed to decode base64 image\n");
+        return -1;
+    }
+
+    char filepath[PATH_MAX];
+    snprintf(filepath, sizeof(filepath), "%s/%s", output_dir, filename);
+
+    FILE *f = fopen(filepath, "wb");
+    if (!f) {
+        fprintf(stderr, "Error: Could not create image file '%s'\n", filepath);
+        free(decoded);
+        return -1;
+    }
+
+    fwrite(decoded, 1, decoded_len, f);
+    fclose(f);
+    free(decoded);
+
+    fprintf(stderr, "Saved image: %s\n", filepath);
+    return 0;
+}
+
+int mistral_extract_content(const char *json_result, const char *output_dir, char **markdown) {
+    *markdown = NULL;
+
+    cJSON *json = cJSON_Parse(json_result);
+    if (!json) {
+        fprintf(stderr, "Error: Failed to parse OCR result JSON\n");
+        return -1;
+    }
+
+    cJSON *pages = cJSON_GetObjectItem(json, "pages");
+    if (!cJSON_IsArray(pages)) {
+        fprintf(stderr, "Error: No pages array in OCR result\n");
+        cJSON_Delete(json);
+        return -1;
+    }
+
+    // Calculate total size needed for merged markdown
+    size_t total_size = 0;
+    int page_count = cJSON_GetArraySize(pages);
+
+    for (int i = 0; i < page_count; i++) {
+        cJSON *page = cJSON_GetArrayItem(pages, i);
+        cJSON *md = cJSON_GetObjectItem(page, "markdown");
+        if (cJSON_IsString(md) && md->valuestring) {
+            total_size += strlen(md->valuestring);
+            if (i < page_count - 1) {
+                total_size += 2;  // "\n\n" between pages
+            }
+        }
+    }
+
+    // Allocate buffer for merged markdown
+    *markdown = malloc(total_size + 1);
+    if (!*markdown) {
+        fprintf(stderr, "Error: Failed to allocate memory for markdown\n");
+        cJSON_Delete(json);
+        return -1;
+    }
+    (*markdown)[0] = '\0';
+
+    // Process each page
+    char *write_ptr = *markdown;
+    for (int i = 0; i < page_count; i++) {
+        cJSON *page = cJSON_GetArrayItem(pages, i);
+
+        // Extract images
+        cJSON *images = cJSON_GetObjectItem(page, "images");
+        if (cJSON_IsArray(images)) {
+            int image_count = cJSON_GetArraySize(images);
+            for (int j = 0; j < image_count; j++) {
+                cJSON *image = cJSON_GetArrayItem(images, j);
+                cJSON *id = cJSON_GetObjectItem(image, "id");
+                cJSON *base64 = cJSON_GetObjectItem(image, "image_base64");
+
+                if (cJSON_IsString(id) && cJSON_IsString(base64) &&
+                    id->valuestring && base64->valuestring) {
+                    save_base64_image(base64->valuestring, output_dir, id->valuestring);
+                }
+            }
+        }
+
+        // Append markdown content
+        cJSON *md = cJSON_GetObjectItem(page, "markdown");
+        if (cJSON_IsString(md) && md->valuestring) {
+            size_t len = strlen(md->valuestring);
+            memcpy(write_ptr, md->valuestring, len);
+            write_ptr += len;
+
+            // Add separator between pages
+            if (i < page_count - 1) {
+                *write_ptr++ = '\n';
+                *write_ptr++ = '\n';
+            }
+        }
+    }
+    *write_ptr = '\0';
+
+    cJSON_Delete(json);
+    return 0;
 }

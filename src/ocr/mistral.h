@@ -79,4 +79,15 @@ int mistral_process(const char *filepath, const char *api_key, MistralOcrResult 
  */
 void mistral_free_result(MistralOcrResult *result);
 
+/**
+ * Extract and process OCR content from JSON result
+ * - Merges markdown from all pages
+ * - Extracts base64 images and saves them as files
+ * @param json_result Raw JSON result from OCR API
+ * @param output_dir Directory to save extracted images
+ * @param markdown Output buffer for merged markdown (allocated, caller must free)
+ * @return 0 on success, -1 on error
+ */
+int mistral_extract_content(const char *json_result, const char *output_dir, char **markdown);
+
 #endif /* MISTRAL_H */
