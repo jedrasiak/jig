@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "ocr.h"
+#include "mistral.h"
 #include "config/config.h"
 
 static void help(void);
@@ -96,14 +97,38 @@ int ocr(int argc, char **argv) {
     }
 
     if (strcmp(provider->name, "mistral") == 0) {
-        // processing
-        printf("Using Mistral OCR provider\n");
-
-        // cleanup
-        printf("OCR processing completed for file: %s\n", filepath);
-        free_settings(&settings);
         fclose(file);
-        return 0;
+        file = NULL;
+
+        if (strlen(provider->key) == 0) {
+            fprintf(stderr, "Error: No API key configured for provider '%s'\n", provider->name);
+            free_settings(&settings);
+            return 1;
+        }
+
+        if (mistral_init() != 0) {
+            fprintf(stderr, "Error: Failed to initialize HTTP client\n");
+            free_settings(&settings);
+            return 1;
+        }
+
+        MistralOcrResult result;
+        int ret = mistral_process(filepath, provider->key, &result);
+
+        if (ret == 0 && result.success) {
+            printf("%s\n", result.ocr_result);
+        } else {
+            fprintf(stderr, "Error: OCR processing failed");
+            if (result.error) {
+                fprintf(stderr, ": %s", result.error);
+            }
+            fprintf(stderr, "\n");
+        }
+
+        mistral_free_result(&result);
+        mistral_cleanup();
+        free_settings(&settings);
+        return ret == 0 ? 0 : 1;
     } else {
         fprintf(stderr, "Error: Unsupported provider '%s'\n", provider->name);
         help();

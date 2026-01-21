@@ -9,6 +9,7 @@
 #include "edges/edges.h"
 #include "tree/tree.h"
 #include "note/note.h"
+#include "ocr/ocr.h"
 
 /**
  * Display help message
@@ -27,6 +28,7 @@ static void help(void) {
     printf("  edges               Manage graph edges\n");
     printf("  tree                Display hierarchical tree structure\n");
     printf("  note                Create new note scaffold\n");
+    printf("  ocr                 Perform OCR on documents\n");
     printf("\n");
     printf("Options:\n");
     printf("  -h, --help          Display this help and exit\n");
@@ -88,5 +90,11 @@ int main(int argc, char **argv) {
         return note(argc - 1, argv + 1);
     }
 
-    return 0;
+    if (strcmp(argv[1], "ocr") == 0) {
+        return ocr(argc - 1, argv + 1);
+    }
+
+    fprintf(stderr, "Error: Unknown command '%s'\n", argv[1]);
+    help();
+    return 1;
 }
