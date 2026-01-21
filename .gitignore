@@ -1,4 +1,4 @@
-/.*
+.*
 /bin
 /build
 /playground
@@ -6,3 +6,5 @@
 
 *.swp
 TODO.md
+.env
+jig.conf
