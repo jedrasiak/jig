@@ -452,6 +452,77 @@ static int save_base64_image(const char *base64_data, const char *output_dir, co
     return 0;
 }
 
+// Replace table reference [id](id) with actual table content
+static char *replace_table_refs(const char *markdown, cJSON *tables) {
+    if (!cJSON_IsArray(tables) || cJSON_GetArraySize(tables) == 0) {
+        return strdup(markdown);
+    }
+
+    // Calculate new size (table content may be larger than reference)
+    size_t new_size = strlen(markdown);
+    int table_count = cJSON_GetArraySize(tables);
+
+    for (int i = 0; i < table_count; i++) {
+        cJSON *table = cJSON_GetArrayItem(tables, i);
+        cJSON *id = cJSON_GetObjectItem(table, "id");
+        cJSON *content = cJSON_GetObjectItem(table, "content");
+
+        if (cJSON_IsString(id) && cJSON_IsString(content)) {
+            // Reference format: [id](id) - estimate max replacement growth
+            size_t ref_len = strlen(id->valuestring) * 2 + 4;  // []()+id twice
+            size_t content_len = strlen(content->valuestring);
+            if (content_len > ref_len) {
+                new_size += (content_len - ref_len) + 2;  // +2 for newlines
+            }
+        }
+    }
+
+    char *result = malloc(new_size + 1);
+    if (!result) return NULL;
+
+    const char *src = markdown;
+    char *dst = result;
+
+    while (*src) {
+        // Look for table reference pattern [*.md](*.md)
+        if (*src == '[') {
+            int found = 0;
+            for (int i = 0; i < table_count; i++) {
+                cJSON *table = cJSON_GetArrayItem(tables, i);
+                cJSON *id = cJSON_GetObjectItem(table, "id");
+                cJSON *content = cJSON_GetObjectItem(table, "content");
+
+                if (!cJSON_IsString(id) || !cJSON_IsString(content)) continue;
+
+                // Build expected reference: [id](id)
+                char ref[256];
+                snprintf(ref, sizeof(ref), "[%s](%s)", id->valuestring, id->valuestring);
+                size_t ref_len = strlen(ref);
+
+                if (strncmp(src, ref, ref_len) == 0) {
+                    // Replace with table content
+                    *dst++ = '\n';
+                    size_t content_len = strlen(content->valuestring);
+                    memcpy(dst, content->valuestring, content_len);
+                    dst += content_len;
+                    *dst++ = '\n';
+                    src += ref_len;
+                    found = 1;
+                    break;
+                }
+            }
+            if (!found) {
+                *dst++ = *src++;
+            }
+        } else {
+            *dst++ = *src++;
+        }
+    }
+    *dst = '\0';
+
+    return result;
+}
+
 int mistral_extract_content(const char *json_result, const char *output_dir, char **markdown) {
     *markdown = NULL;
 
@@ -468,15 +539,29 @@ int mistral_extract_content(const char *json_result, const char *output_dir, cha
         return -1;
     }
 
-    // Calculate total size needed for merged markdown
-    size_t total_size = 0;
     int page_count = cJSON_GetArraySize(pages);
 
+    // First pass: calculate size and collect content
+    size_t total_size = 0;
     for (int i = 0; i < page_count; i++) {
         cJSON *page = cJSON_GetArrayItem(pages, i);
         cJSON *md = cJSON_GetObjectItem(page, "markdown");
         if (cJSON_IsString(md) && md->valuestring) {
             total_size += strlen(md->valuestring);
+
+            // Add space for table content expansion
+            cJSON *tables = cJSON_GetObjectItem(page, "tables");
+            if (cJSON_IsArray(tables)) {
+                int table_count = cJSON_GetArraySize(tables);
+                for (int j = 0; j < table_count; j++) {
+                    cJSON *table = cJSON_GetArrayItem(tables, j);
+                    cJSON *content = cJSON_GetObjectItem(table, "content");
+                    if (cJSON_IsString(content)) {
+                        total_size += strlen(content->valuestring) + 4;
+                    }
+                }
+            }
+
             if (i < page_count - 1) {
                 total_size += 2;  // "\n\n" between pages
             }
@@ -484,16 +569,16 @@ int mistral_extract_content(const char *json_result, const char *output_dir, cha
     }
 
     // Allocate buffer for merged markdown
-    *markdown = malloc(total_size + 1);
-    if (!*markdown) {
+    char *merged = malloc(total_size + 1);
+    if (!merged) {
         fprintf(stderr, "Error: Failed to allocate memory for markdown\n");
         cJSON_Delete(json);
         return -1;
     }
-    (*markdown)[0] = '\0';
+    merged[0] = '\0';
 
     // Process each page
-    char *write_ptr = *markdown;
+    char *write_ptr = merged;
     for (int i = 0; i < page_count; i++) {
         cJSON *page = cJSON_GetArrayItem(pages, i);
 
@@ -513,12 +598,18 @@ int mistral_extract_content(const char *json_result, const char *output_dir, cha
             }
         }
 
-        // Append markdown content
+        // Get markdown and replace table references
         cJSON *md = cJSON_GetObjectItem(page, "markdown");
+        cJSON *tables = cJSON_GetObjectItem(page, "tables");
+
         if (cJSON_IsString(md) && md->valuestring) {
-            size_t len = strlen(md->valuestring);
-            memcpy(write_ptr, md->valuestring, len);
-            write_ptr += len;
+            char *processed = replace_table_refs(md->valuestring, tables);
+            if (processed) {
+                size_t len = strlen(processed);
+                memcpy(write_ptr, processed, len);
+                write_ptr += len;
+                free(processed);
+            }
 
             // Add separator between pages
             if (i < page_count - 1) {
@@ -529,6 +620,7 @@ int mistral_extract_content(const char *json_result, const char *output_dir, cha
     }
     *write_ptr = '\0';
 
+    *markdown = merged;
     cJSON_Delete(json);
     return 0;
 }

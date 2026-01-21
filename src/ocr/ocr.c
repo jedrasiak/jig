@@ -126,7 +126,7 @@ int ocr(int argc, char **argv) {
             return 1;
         }
 
-        // Get the directory of the source file for saving images
+        // Get the directory of the source file
         char source_dir[PATH_MAX];
         strncpy(source_dir, filepath, PATH_MAX - 1);
         char *last_slash = strrchr(source_dir, '/');
@@ -136,26 +136,43 @@ int ocr(int argc, char **argv) {
             strcpy(source_dir, ".");
         }
 
+        // Set default output path if not specified
+        if (strlen(output_path) == 0) {
+            int written = snprintf(output_path, PATH_MAX, "%s/index.md", source_dir);
+            if (written >= PATH_MAX) {
+                fprintf(stderr, "Error: Output path too long\n");
+                mistral_cleanup();
+                free_settings(&settings);
+                return 1;
+            }
+        }
+
+        // Get output directory for saving images
+        char output_dir[PATH_MAX];
+        strncpy(output_dir, output_path, PATH_MAX - 1);
+        char *out_slash = strrchr(output_dir, '/');
+        if (out_slash) {
+            *out_slash = '\0';
+        } else {
+            strcpy(output_dir, ".");
+        }
+
         MistralOcrResult result;
         int ret = mistral_process(filepath, provider->key, &result);
 
         if (ret == 0 && result.success) {
             char *markdown = NULL;
-            ret = mistral_extract_content(result.ocr_result, source_dir, &markdown);
+            ret = mistral_extract_content(result.ocr_result, output_dir, &markdown);
 
             if (ret == 0 && markdown) {
-                if (strlen(output_path) > 0) {
-                    FILE *out = fopen(output_path, "w");
-                    if (out) {
-                        fprintf(out, "%s", markdown);
-                        fclose(out);
-                        fprintf(stderr, "Output saved to: %s\n", output_path);
-                    } else {
-                        fprintf(stderr, "Error: Could not write to '%s'\n", output_path);
-                        ret = -1;
-                    }
+                FILE *out = fopen(output_path, "w");
+                if (out) {
+                    fprintf(out, "%s", markdown);
+                    fclose(out);
+                    fprintf(stderr, "Output saved to: %s\n", output_path);
                 } else {
-                    printf("%s", markdown);
+                    fprintf(stderr, "Error: Could not write to '%s'\n", output_path);
+                    ret = -1;
                 }
                 free(markdown);
             } else {
@@ -191,7 +208,7 @@ static void help(void) {
     printf("\n");
     printf("OPTIONS:\n");
     printf("  -f, --file FILE      Specify the file to process (required)\n");
-    printf("  -o, --output FILE    Save output to file (default: stdout)\n");
+    printf("  -o, --output FILE    Save output to file (default: index.md in PDF dir)\n");
     printf("  -p, --provider NAME  Specify OCR provider to use (default: mistral)\n");
     printf("  -h, --help           Display this help message\n");
     printf("\n");
