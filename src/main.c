@@ -1,12 +1,15 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "config/config.h"
 #include "filter/filter.h"
 #include "find/find.h"
+#include "init/init.h"
 #include "nodes/nodes.h"
 #include "edges/edges.h"
 #include "tree/tree.h"
 #include "note/note.h"
+#include "ocr/ocr.h"
 
 /**
  * Display help message
@@ -17,12 +20,15 @@ static void help(void) {
     printf("Knowledge graph management tool for organizing multi-lingual content.\n");
     printf("\n");
     printf("Commands:\n");
+    printf("  config              Display parsed configuration\n");
     printf("  find                Find files in the graph\n");
+    printf("  init                Initialize configuration file\n");
     printf("  filter              Filter and parse markdown files\n");
     printf("  nodes               Manage graph nodes\n");
     printf("  edges               Manage graph edges\n");
     printf("  tree                Display hierarchical tree structure\n");
     printf("  note                Create new note scaffold\n");
+    printf("  ocr                 Perform OCR on documents\n");
     printf("\n");
     printf("Options:\n");
     printf("  -h, --help          Display this help and exit\n");
@@ -52,12 +58,20 @@ int main(int argc, char **argv) {
         return 0;
     }
 
+    if (strcmp(argv[1], "config") == 0) {
+        return config(argc - 1, argv + 1);
+    }
+
     if (strcmp(argv[1], "filter") == 0) {
         return filter(argc - 1, argv + 1);
     }
 
     if (strcmp(argv[1], "find") == 0) {
         return find(argc - 1, argv + 1);
+    }
+
+    if (strcmp(argv[1], "init") == 0) {
+        return init(argc - 1, argv + 1);
     }
 
     if (strcmp(argv[1], "nodes") == 0) {
@@ -76,5 +90,11 @@ int main(int argc, char **argv) {
         return note(argc - 1, argv + 1);
     }
 
-    return 0;
+    if (strcmp(argv[1], "ocr") == 0) {
+        return ocr(argc - 1, argv + 1);
+    }
+
+    fprintf(stderr, "Error: Unknown command '%s'\n", argv[1]);
+    help();
+    return 1;
 }
