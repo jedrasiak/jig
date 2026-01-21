@@ -59,6 +59,7 @@ modules:
 	@$(MAKE) -C $(SRC_DIR)/edges
 	@$(MAKE) -C $(SRC_DIR)/tree
 	@$(MAKE) -C $(SRC_DIR)/note
+	@$(MAKE) -C $(SRC_DIR)/ocr
 
 # Clean build artifacts
 clean: clean-modules
@@ -76,6 +77,7 @@ clean-modules:
 	@$(MAKE) -C $(SRC_DIR)/edges clean
 	@$(MAKE) -C $(SRC_DIR)/tree clean
 	@$(MAKE) -C $(SRC_DIR)/note clean
+	@$(MAKE) -C $(SRC_DIR)/ocr clean
 	@$(MAKE) -C $(SRC_DIR)/slugify clean
 	@$(MAKE) -C $(SRC_DIR)/uuid clean
 
