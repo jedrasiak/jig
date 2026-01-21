@@ -36,6 +36,7 @@ jig find . -p '\.md$' | jig filter | jig tree
 - **jig-nodes** - Extract node information from files
 - **jig-edges** - Build relationships between nodes
 - **jig-tree** - Display hierarchical tree visualization
+- **jig-ocr** - Perform OCR on PDF documents using cloud providers
 
 Each command can be invoked as `jig <command>` (subcommand mode) or `jig-<command>` (standalone mode).
 
@@ -166,6 +167,31 @@ jig find . | jig filter | jig nodes | jig edges | tail -n +2 | wc -l
 jig find ./notes | jig filter | jig tree > hierarchy.txt
 ```
 
+### OCR Processing
+
+Extract text and images from PDF documents:
+
+```bash
+# Process a PDF (output to index.md in same directory)
+jig ocr -f document.pdf
+
+# Specify custom output location
+jig ocr -f document.pdf -o /output/content.md
+```
+
+For large PDFs, split them first using `qpdf`:
+
+```bash
+# Install qpdf
+sudo apt install qpdf
+
+# Split PDF by page range
+qpdf book.pdf --pages . 1-20 -- chapter1.pdf
+
+# OCR each part
+jig ocr -f chapter1.pdf -o chapter1/index.md
+```
+
 ## Installation
 
 ### For End Users
@@ -238,6 +264,7 @@ The build creates:
 - `bin/jig-nodes` - Standalone nodes binary
 - `bin/jig-edges` - Standalone edges binary
 - `bin/jig-tree` - Standalone tree binary
+- `bin/jig-ocr` - Standalone OCR binary
 
 All binaries are distributed together, enabling both subcommand mode (`jig filter`) and standalone mode (`jig-filter`).
 
@@ -273,6 +300,7 @@ Each command has detailed documentation in man page format:
 - [jig-nodes(1)](src/nodes/README.md) - Extract nodes
 - [jig-edges(1)](src/edges/README.md) - Build edges
 - [jig-tree(1)](src/tree/README.md) - Visualize hierarchy
+- [jig-ocr(1)](src/ocr/README.md) - OCR processing
 
 ## Contributing
 
@@ -290,8 +318,11 @@ jig/
 │   ├── nodes/          # Nodes module
 │   ├── edges/          # Edges module
 │   ├── tree/           # Tree module
+│   ├── ocr/            # OCR module (requires libcurl)
 │   ├── uuid/           # UUID generation utility
 │   └── slugify/        # Slug generation utility
+├── vendor/             # Vendored dependencies
+│   └── cjson/          # cJSON library
 ├── bin/                # Final executables (generated)
 │   ├── jig             # Main executable
 │   ├── jig-*           # Standalone module binaries
@@ -370,13 +401,22 @@ gcc -Wall -Wextra -Werror -I./src <sources> -o bin/jig
 
 **Dependencies:**
 
-Only standard C libraries (no third-party dependencies):
+Standard C libraries:
 - `stdio.h` - Standard I/O
 - `stdlib.h` - Memory allocation
 - `string.h` - String operations
 - `regex.h` - POSIX regex
 - `dirent.h` - Directory traversal
 - `sys/stat.h` - File metadata
+
+OCR module requires:
+- `libcurl` - HTTP client library
+- `cJSON` - JSON parsing (vendored in `vendor/cjson/`)
+
+```bash
+# Install libcurl development headers
+sudo apt install libcurl4-openssl-dev
+```
 
 ### Performance Measuring
 
