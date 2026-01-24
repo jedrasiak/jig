@@ -31,28 +31,107 @@ jig is a Unix-philosophy CLI tool for managing knowledge graphs. It provides com
 
 ## Common Pipelines
 
-### Discovering base structure
+### Visualizing the Knowledge Graph
+
 ```bash
-# Print human friendly tree for all languages available
+# Display ASCII tree of the entire knowledge base
 jig find . -p '\.md$' | jig filter | jig tree
 
-# Print tree with markdown links - useful when there is a need to extract note path
+# Display tree with markdown links (useful for extracting note paths)
 jig find . -p '\.md$' | jig filter | jig tree -f md
+
+# Display tree from a specific subdirectory
+jig find ./topics -p '\.md$' | jig filter | jig tree
 ```
 
-### Other
+### Analyzing Graph Structure
+
 ```bash
-# Extract node data for analysis
+# Extract all nodes as CSV (columns: id,title,path)
 jig find . -p '\.md$' | jig filter | jig nodes
 
-# Build relationship data
+# Extract all relationships/edges as CSV
 jig find . -p '\.md$' | jig filter | jig nodes | jig edges
 
-# Create a new note
-jig note "Note Title"
+# Count total notes in the knowledge base
+jig find . -p '\.md$' | jig filter | wc -l
 
-# Create multi-language note
-jig note "Note Title" -l "en,pl"
+# Count nodes (excluding CSV header)
+jig find . -p '\.md$' | jig filter | jig nodes | tail -n +2 | wc -l
+```
+
+### Finding Specific Content
+
+```bash
+# Find notes by filename pattern
+jig find . -p 'meeting' | jig filter
+
+# List all node titles
+jig find . -p '\.md$' | jig filter | jig nodes | tail -n +2 | cut -d, -f2
+
+# Find orphan nodes (notes without parent links)
+jig find . -p '\.md$' | jig filter | jig nodes | tail -n +2 | awk -F, 'NF < 4 || $4 == ""'
+
+# Find nodes with specific parent relationship
+jig find . -p '\.md$' | jig filter | jig nodes | jig edges | grep "parent"
+```
+
+### Creating Notes
+
+General rules:
+- Always create notes for every language actively used in the knowledge graph (info about it is taken from `AGENT.md`). Prepare translated title unless explicitly provided.
+- Always try to use default note template located in `.templates/note.md` file (if it exists).
+- Always link the new note with an existing one using `parent` label. Recognize the structure of tree first and find the best candidate, unless explicitly provided by the user.
+- Do not link different language versions of the same note.
+
+```bash
+# Create a simple note (uses default template if available)
+jig note "My Note Title"
+
+# Create multi-language note with explicit titles
+jig note "COMMON TITLE" -n "en:English title" -n "pl:Polski tytuł"
+
+# Create note with parent link
+jig note "Child Note" -l "parent:parent-folder"
+
+# Full command with all options
+jig note "COMMON TITLE" -n "en:English title" -n "pl:Polski tytuł" -l "parent:folder-name" -t ".templates/note.md"
+```
+
+### OCR Processing
+
+```bash
+# Extract text from PDF (saves to index.md in same directory)
+jig ocr -f document.pdf
+
+# Extract text from PDF with custom output location
+jig ocr -f document.pdf -o extracted-content.md
+
+# Extract using specific provider
+jig ocr -f document.pdf -p mistral
+```
+
+### Configuration
+
+```bash
+# Initialize jig configuration in current directory
+jig init
+
+# Display current configuration
+jig config
+```
+
+### Data Processing Patterns
+
+```bash
+# Export nodes to analyze externally (e.g., import to spreadsheet)
+jig find . -p '\.md$' | jig filter | jig nodes > nodes.csv
+
+# Export full graph structure (nodes + edges)
+jig find . -p '\.md$' | jig filter | jig nodes | jig edges > edges.csv
+
+# Get list of all unique parent relationships
+jig find . -p '\.md$' | jig filter | jig nodes | jig edges | tail -n +2 | cut -d, -f5 | sort -u
 ```
 
 ## Execution Guidelines
