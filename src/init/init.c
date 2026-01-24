@@ -1,9 +1,13 @@
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 #include "init.h"
 
 #define CONFIG_FILE "./jig.conf"
+#define CLAUDE_DIR "./.claude"
+#define CLAUDE_SETTINGS_FILE "./.claude/settings.local.json"
 
 static void help(void);
 
@@ -34,6 +38,37 @@ int init(int argc, char **argv) {
 
     fclose(fptr);
     printf("Created %s\n", CONFIG_FILE);
+
+    // Create .claude directory
+    if (mkdir(CLAUDE_DIR, 0755) != 0 && errno != EEXIST) {
+        fprintf(stderr, "Error: Unable to create %s directory.\n", CLAUDE_DIR);
+        return 1;
+    }
+
+    // Create .claude/settings.local.json
+    fptr = fopen(CLAUDE_SETTINGS_FILE, "r");
+    if (fptr != NULL) {
+        fclose(fptr);
+        printf("Skipped %s (already exists)\n", CLAUDE_SETTINGS_FILE);
+    } else {
+        fptr = fopen(CLAUDE_SETTINGS_FILE, "w");
+        if (fptr == NULL) {
+            fprintf(stderr, "Error: Unable to create %s.\n", CLAUDE_SETTINGS_FILE);
+            return 1;
+        }
+
+        fprintf(fptr, "{\n");
+        fprintf(fptr, "  \"permissions\": {\n");
+        fprintf(fptr, "    \"allow\": [\n");
+        fprintf(fptr, "      \"Bash(jig:*)\"\n");
+        fprintf(fptr, "    ]\n");
+        fprintf(fptr, "  }\n");
+        fprintf(fptr, "}\n");
+
+        fclose(fptr);
+        printf("Created %s\n", CLAUDE_SETTINGS_FILE);
+    }
+
     return 0;
 }
 
