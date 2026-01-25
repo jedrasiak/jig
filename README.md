@@ -33,6 +33,7 @@ jig find . -p '\.md$' | jig filter | jig tree
 - **jig-note** - Create note scaffold with directory and markdown files
 - **jig-find** - Recursively find files in directory tree
 - **jig-filter** - Validate note files by frontmatter criteria
+- **jig-hierarchy** - Generate ancestor chain data for breadcrumbs
 - **jig-nodes** - Extract node information from files
 - **jig-edges** - Build relationships between nodes
 - **jig-tree** - Display hierarchical tree visualization
@@ -261,6 +262,7 @@ The build creates:
 - `bin/jig-note` - Standalone note binary
 - `bin/jig-filter` - Standalone filter binary
 - `bin/jig-find` - Standalone find binary
+- `bin/jig-hierarchy` - Standalone hierarchy binary
 - `bin/jig-nodes` - Standalone nodes binary
 - `bin/jig-edges` - Standalone edges binary
 - `bin/jig-tree` - Standalone tree binary
@@ -297,6 +299,7 @@ Each command has detailed documentation in man page format:
 - [jig-note(1)](src/note/README.md) - Create note scaffolds
 - [jig-find(1)](src/find/README.md) - Find files recursively
 - [jig-filter(1)](src/filter/README.md) - Filter valid notes
+- [jig-hierarchy(1)](src/hierarchy/README.md) - Generate ancestor chains
 - [jig-nodes(1)](src/nodes/README.md) - Extract nodes
 - [jig-edges(1)](src/edges/README.md) - Build edges
 - [jig-tree(1)](src/tree/README.md) - Visualize hierarchy
@@ -315,6 +318,7 @@ jig/
 │   ├── note/           # Note scaffold creation module
 │   ├── filter/         # Filter module
 │   ├── find/           # Find module
+│   ├── hierarchy/      # Hierarchy module (breadcrumb data)
 │   ├── nodes/          # Nodes module
 │   ├── edges/          # Edges module
 │   ├── tree/           # Tree module
