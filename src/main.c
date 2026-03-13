@@ -4,6 +4,7 @@
 #include "config/config.h"
 #include "filter/filter.h"
 #include "find/find.h"
+#include "hierarchy/hierarchy.h"
 #include "init/init.h"
 #include "nodes/nodes.h"
 #include "edges/edges.h"
@@ -24,6 +25,7 @@ static void help(void) {
     printf("  find                Find files in the graph\n");
     printf("  init                Initialize configuration file\n");
     printf("  filter              Filter and parse markdown files\n");
+    printf("  hierarchy           Generate ancestor chain data for breadcrumbs\n");
     printf("  nodes               Manage graph nodes\n");
     printf("  edges               Manage graph edges\n");
     printf("  tree                Display hierarchical tree structure\n");
@@ -68,6 +70,10 @@ int main(int argc, char **argv) {
 
     if (strcmp(argv[1], "find") == 0) {
         return find(argc - 1, argv + 1);
+    }
+
+    if (strcmp(argv[1], "hierarchy") == 0) {
+        return hierarchy(argc - 1, argv + 1);
     }
 
     if (strcmp(argv[1], "init") == 0) {
