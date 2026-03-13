@@ -472,6 +472,32 @@ All heap blocks were freed -- no leaks are possible
 - Use stderr for error messages (if needed)
 - Write man page style documentation for new commands
 
+## Claude Code Plugin
+
+**jig** includes a Claude Code plugin that adds AI-assisted knowledge graph operations through a `jig-runner` agent and helper commands.
+
+### Using the Plugin
+
+The plugin is not yet published to a registry. To use it, run Claude Code with the `--plugin-dir` flag pointing to the `claude/` directory in this repository:
+
+```bash
+claude --plugin-dir ./claude
+```
+
+This loads the plugin locally for the current session, making the `jig-runner` agent and all bundled commands available inside Claude Code.
+
+### The jig-runner Agent
+
+The plugin ships a `jig-runner` agent that operates your knowledge base using jig commands. It triggers automatically when you ask about your notes, graph structure, hierarchies, or any jig-related task. You can also address it directly by prefixing your message with `jig-runner`:
+
+```
+jig-runner, show me the full hierarchy
+jig-runner, create a note called "Project Ideas"
+jig-runner, how many orphan nodes do I have?
+```
+
+The agent reads `AGENT.md` from your project root on startup to learn knowledge-base-specific rules (languages, conventions, templates), then uses jig pipelines to fulfill your request.
+
 ## License
 
 See LICENSE file for details.
